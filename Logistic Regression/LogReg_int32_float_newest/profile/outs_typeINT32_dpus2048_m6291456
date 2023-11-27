@@ -1,0 +1,3022 @@
+Allocated 2048 DPU(s)
+i = 500, lr = 0.0001, m = 6291456, n = 16
+Predefined weight: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 
+Successfully generate float input data.
+Successfully quantize input data.
+-----Start traing at host, fixed-point arithmetic-----
+error rate on host_ideal = 1.30%, reduction: 82001, sum_of_Y: 3144104
+Load input data to DPUs
+arguments sent
+mode sent
+x,y sent
+Run program on DPU(s)...
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+DPU iter 0...
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+DPU iter 100...
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+DPU iter 200...
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+DPU iter 300...
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+DPU iter 400...
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Run done
+dot sent
+op mode sent
+sigmoid sent
+run 2 end
+dpu results sent
+Trained weight at host: 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 
+Trained weight at DPU: 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 
+CPU Time (ms): 651620.913000  init C-D Time (ms): 42.829000  syn C-D Time (ms): 1116.723000  DPU kernel Time (ms): 6774.472000  D-C Time (ms): 1032.054000  CPU reduction Time (ms): 80.883000  CPU verif Time (ms): 0.000000  CPU sigmoid Time (ms): 0.464000  [[32mOK[0m] Outputs are equal
+error rate on host = 16.02%, reduction: 1008053, sum_of_Y: 3144104
+error rate on DPUs = 16.02%, reduction: 1008053, sum_of_Y: 3144104

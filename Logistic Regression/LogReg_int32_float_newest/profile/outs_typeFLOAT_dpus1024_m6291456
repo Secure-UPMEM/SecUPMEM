@@ -1,0 +1,14 @@
+Allocated 1024 DPU(s)
+i = 500, lr = 0.0001, m = 6291456, n = 16
+Predefined weight: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 
+Successfully generate float input data.
+-----Start traing at host, float-----
+error rate on host_ideal = 1.30%, reduction: 82001, sum_of_Y: 3144104
+Load input data to DPUs
+arguments sent
+mode sent
+x,y sent
+Run program on DPU(s)...
+weight
+1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  
+Run done
