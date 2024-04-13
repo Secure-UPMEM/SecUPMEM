@@ -341,7 +341,7 @@ int main(int argc, char **argv) {
 	}
 
 	for (unsigned int rep = 0; rep < p.n_warmup + p.n_reps; rep++) {
-		// for (unsigned int g = 0; g< batch_size/group_number; g++){
+		for (unsigned int g = 0; g< batch_size/group_number; g++){
 				i = 0;
 				if (rep >= p.n_warmup)
 					start(&timer, 1, rep - p.n_warmup);//TIMER, 1 is for cpu-dpu communication
@@ -564,7 +564,7 @@ int main(int argc, char **argv) {
 					ciphertext[b][i]=ciphertexttemp[b][i];
 				}
 			}
-		// }
+		}
 	}
 
 #if ENERGY
