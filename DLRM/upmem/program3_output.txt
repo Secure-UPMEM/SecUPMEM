@@ -1,4 +1,0 @@
-[ MAKE ]       dpu
-make[1]: Entering directory '/home/upmem0026/sghoflsaz/dlrmdimitri/PIM-Embedding-Lookup/upmem/src/dpu'
-make[1]: Nothing to be done for 'all'.
-make[1]: Leaving directory '/home/upmem0026/sghoflsaz/dlrmdimitri/PIM-Embedding-Lookup/upmem/src/dpu'
