@@ -10,3 +10,5 @@ CODE REFERENCES:
 2- DLRM: https://github.com/UBC-ECE-Sasha/PIM-Embedding-Lookup
 
 3- Logistic Regression and Linear Regression: https://github.com/CMU-SAFARI/pim-ml
+
+4- AES implementation: https://github.com/kokke/tiny-AES-c/blob/master/aes.c
