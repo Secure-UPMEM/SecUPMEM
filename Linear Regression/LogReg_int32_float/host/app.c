@@ -34,7 +34,7 @@
 #include <dpu_probe.h>
 #endif
 
-#define PART 64
+#define PART 10
 // Pointer declaration
 static T* X;
 static T* X_C;
@@ -90,17 +90,6 @@ int power(int a, int n) {
   }
 }
 
-// int fast_pow(int base, int exponent) {
-//     if (exponent == 0) 
-//         return 1;
-//     if (exponent % 2 == 0) {
-//         int half_pow = fast_pow(base, exponent / 2);
-//         return half_pow * half_pow;
-//     } else {
-//         return base * fast_pow(base, exponent - 1);
-//     }
-// }
-
 #ifdef FLOAT // float 
 // Train weight coefficients in the host 
 static void GD_host(T* X, T* Y, T* W, uint32_t m_size, uint32_t n_size, uint32_t iter_time, float lr) {
@@ -124,21 +113,12 @@ static void GD_host(T* X, T* Y, T* W, uint32_t m_size, uint32_t n_size, uint32_t
             for (unsigned int l = 0; l < n_size; ++l) {
                 gradient_tmp[l] -= X[j*n_size + l] * (Y[j] - dot_product) / m_size; // avoid overflow 
             }
-            // if(j < 4){
-            //     printf("dot_product at host: %f\n", dot_product);
-            //     printf("X at host: "); 
-            //     for (uint32_t each_attribute = 0; each_attribute < n_size; each_attribute++) {
-            //         printf("%f, ", X[j*n_size + each_attribute]); 
-            //     }
-            //     printf("\n"); 
-            // } 
         } // gradient done 
         
         // update weight
         for (uint32_t m = 0; m < n_size; ++m) {
             W[m] = W[m] - (gradient_tmp[m] * lr); 
         }
-        // printf("i: %d, g: %.4f, g*lr: %.4f, w: %f\n", i, gradient_tmp[0], gradient_tmp[0] * lr, W[0]); 
         free(gradient_tmp); 
     } // end iteration
 }
@@ -185,13 +165,14 @@ static int read_input_SUSY_fp(T* X, T* Y, unsigned int m_size, unsigned int n_si
 }
 
 // Train weight coefficients in the host
-static void GD_host_fp(T* X, T* Y, T* W, uint32_t m_size, uint32_t n_size, uint32_t iter_time, float lr) {
+static void GD_host_fp(T* X, T* Y, T* W, T** y_expected,T** gd_expected, uint32_t m_size, uint32_t n_size, uint32_t iter_time, float lr) {
     printf("-----Start traing at host, int-----\n");
 
     // init weight with random value
     for (uint32_t n = 0; n < n_size; ++n){
+        
         // W[n] = (T) 1; 
-        W[n] = (T) (1 << SHIFT_AMOUNT); 
+        W[n] = (T) (1 << SHIFT_AMOUNT);
     }
 
     for (uint32_t i = 0; i < iter_time; ++i) {
@@ -203,34 +184,44 @@ static void GD_host_fp(T* X, T* Y, T* W, uint32_t m_size, uint32_t n_size, uint3
             for (unsigned int k = 0; k < n_size; ++k) {
                 dot_product += X[j*n_size + k] * W[k]; 
             }
-
+            y_expected[i][j] = dot_product;
             for (unsigned int l = 0; l < n_size; ++l) {
                 // avoid overflow
                 gradient_tmp[l] -= X[j*n_size + l] * (Y[j]-(dot_product>>
                     SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
             }
-            // if(j < 4){
-            //     printf("dot_product at host: %d, y: %d\n", dot_product, Y[j]);
-            //     printf("X at host: "); 
-            //     for (uint32_t each_attribute = 0; each_attribute < n_size; each_attribute++) {
-            //         printf("%d, ", X[j*n_size + each_attribute]); 
-            //     }
-            //     printf("\n"); 
-            // } 
+            
         } // gradient done 
         
         // update weight
         for (uint32_t m = 0; m < n_size; ++m) {
             W[m] = W[m] - (gradient_tmp[m] * lr) / (m_size>>OVERFLOW_SHIFT); 
+            gd_expected[i][m] = gradient_tmp[m];
         }
-        // printf("i: %d, g: %ld, g*lr: %.4f, w: %d\n", i, gradient_tmp[0], 
-        //     (float) ((gradient_tmp[0] * lr) / (m_size>>OVERFLOW_SHIFT)), W[0]); 
 
         free(gradient_tmp); 
     } // end iteration
 }
 #endif 
+static void GD_host_fp_test(T* X, T* Y, T* dot_product,T* gd_expected, uint32_t m_size, uint32_t n_size) {
+T* gradient_tmp = calloc(n_size, sizeof(T));
+    for (uint32_t j = 0; j < m_size; ++j) {
+         
+            for (unsigned int l = 0; l < n_size; ++l) {
+                // avoid overflow
+                gradient_tmp[l] -= X[j*n_size + l] * (Y[j]-(dot_product[j]>>
+                    SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
+            }
+ // gradient done 
+            
+        }
 
+for (unsigned int l = 0; l < n_size; ++l) {
+
+            gd_expected[l] = gradient_tmp[l];
+}
+   free(gradient_tmp);      
+}
 static void init_argument_tasklet(uint32_t tasklet_id, uint32_t nr_rows, uint32_t* rows_per_tasklet, uint32_t* start_row){
     unsigned int element_per_cacheY = 8 >> DIV; 
     unsigned int chunks = nr_rows / (NR_TASKLETS * element_per_cacheY);
@@ -251,8 +242,7 @@ static void init_argument_tasklet(uint32_t tasklet_id, uint32_t nr_rows, uint32_
     } else {
         *start_row = tasklet_id * (dbl_chunks);
     }
-
-    // printf("tasklet: %d, start_row: %d, row/tasklet: %d\n", tasklet_id, *start_row, *rows_per_tasklet); 
+ 
 }
 
 static void compute_mae(const float* X, const float* Y, const float* W, int m_size, int n_size, 
@@ -274,18 +264,8 @@ static void compute_mae(const float* X, const float* Y, const float* W, int m_si
 
 // Main of the Host Application
 int main(int argc, char **argv) {
-    // double cpu_run=0;
-    // double cpu_run2=0;
-    // double merge=0;
-    // double merge2=0;
-    // double verif1=0;
-    // double verif2=0;
-    // clock_t start1, end1;
-    // clock_t start2, end2;
-    // clock_t start3, end3;
-    // clock_t start4, end4;
+    
     struct Params p = input_params(argc, argv);
-
     struct dpu_set_t dpu_set, dpu;
     uint32_t nr_of_dpus;
 
@@ -315,7 +295,6 @@ int main(int argc, char **argv) {
     dpu_arguments_t *input_args = (dpu_arguments_t *) malloc(nr_of_dpus * sizeof(dpu_arguments_t));
     uint32_t max_rows_per_dpu = 0;
     uint32_t n_size_pad = ((n_size*sizeof(T)) % 8) == 0 ? n_size : roundup(n_size, (8/sizeof(T))); 
-    // printf("%d\n", roundup(n_size, 2)); 
 
     DPU_FOREACH(dpu_set, dpu, i) {
         uint32_t rows_per_dpu;
@@ -354,18 +333,18 @@ int main(int argc, char **argv) {
         for(uint32_t id = 0; id < NR_TASKLETS; ++id) {
             init_argument_tasklet(id, rows_per_dpu, &input_args[i].rows_per_tasklet[id], \
                 &input_args[i].start_row[id]); 
-            // printf("%d, start row %d, row/tasklet %d\n", input_args[i].start_row[id], \
-            //     input_args[i].rows_per_tasklet[id]); 
         }
-
-        // printf("row per dpu: %d\n", rows_per_dpu);
     }
 
     // Input/output allocation
     X = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T));
     X_C = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T)); 
     X_D = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T)); 
-    Y = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
+    Y = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T));
+    T** y_expected = malloc(iter_time * sizeof(T*)); 
+    for(int i=0; i< iter_time; i++){
+        y_expected[i] = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T));
+    }
     T* Y_host = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
     T* Y_dpu = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
     T* Y_total = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
@@ -373,11 +352,8 @@ int main(int argc, char **argv) {
 
     // init trainging dataset and weight for host 
     T *bufferX = X;
-    // T *bufferX_C = X_C;
-    // T *bufferX_D = X_D;
     T *bufferY = Y;
     T *bufferW_host = W; 
-    // T* bufferW_fp = malloc(n_size_pad * sizeof(T)); 
 
     // init training dataset and initial host W 
     # ifdef FLOAT 
@@ -396,10 +372,13 @@ int main(int argc, char **argv) {
         W_dpu[n] = (T) 1.0; 
         W_dpu_fp[n] = (T) (1 << SHIFT_AMOUNT); 
     }
-
     // temp dpu gradient  
-    T* gradient_dpu_tmp = malloc(n_size_pad * nr_of_dpus * sizeof(T)); 
-    // T* gradient_cpu_tmp = malloc(n_size_pad * nr_of_dpus * sizeof(T)); 
+    T* gradient_dpu_tmp = malloc(n_size_pad * nr_of_dpus * sizeof(T));
+
+    T** gd_expected = malloc(iter_time * sizeof(T*)); 
+    for(int i=0; i< iter_time; i++){
+        gd_expected[i] = malloc(n_size * sizeof(T));
+    }
     // Timer declaration
     Timer timer;
 
@@ -409,13 +388,9 @@ int main(int argc, char **argv) {
     #ifdef FLOAT 
     GD_host(bufferX, bufferY, bufferW_host, m_size, n_size, iter_time, learning_rate); 
     #else 
-    GD_host_fp(bufferX, bufferY, bufferW_host, m_size, n_size, iter_time, learning_rate); 
+    GD_host_fp(bufferX, bufferY, bufferW_host,y_expected,gd_expected, m_size, n_size, iter_time, learning_rate); 
     #endif 
-    stop(&timer, 0); 
-    // clock_t end_cpu= clock();
-    // double cpu = ((double) (end_cpu - start_cpu)) *1000.0 / CLOCKS_PER_SEC;
-
-    // free(bufferW_fp); 
+    stop(&timer, 0);  
 
     //Generation ciphertext
     uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
@@ -423,16 +398,17 @@ int main(int argc, char **argv) {
     uint8_t* counter = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(uint8_t));
     // #pragma omp parallel for
    	for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus * n_size_pad; i++){
-		counter[i] = (uint8_t)(&bufferX[i]);
+		counter[i] = (uint8_t)(0+(i*sizeof(T)));//(uint8_t)(bufferX+(i*sizeof(T)));
     }
-    //	printf("sec\n");
+
     AES_init_ctx(&ctx, key);
     AES_ECB_encrypt(&ctx, counter);
-    //	printf("sec\n");
 	// #pragma omp parallel for
     for(uint32_t i=0;i<max_rows_per_dpu * nr_of_dpus * n_size_pad; i++){
         X_C[i] = (T)counter[i];
-		X_D[i]= bufferX[i] + X_C[i];
+		X_D[i]= bufferX[i] - X_C[i];
+	}
+    for(uint32_t i=0;i<10; i++){
 	}
 
     // Transfer input arguments and training dataset to DPU
@@ -492,8 +468,7 @@ int main(int argc, char **argv) {
         }
         DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "mode", 0, \
         sizeof(uint32_t), DPU_XFER_DEFAULT));
-        // printf("op mode sent\n");
-        //i = 0;
+ 
         //end mode
 
         stop(&timer, 2); // syn CPU-DPU transfer time stop 
@@ -503,34 +478,28 @@ int main(int argc, char **argv) {
         
         AES_init_ctx(&ctx, key);
         start(&timer, 6, rep);
-        // start1=clock();
-        // 
-        // #pragma omp parallel for
-        uint8_t* counter1 = malloc((m_size * n_size/PART) * sizeof(uint8_t));
+
+        // // #pragma omp parallel for shared(W, counter1)
+        // for (int s=0; s<PART ; s++){
+        uint8_t* counter1 = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(uint8_t));
         // #pragma omp parallel for shared(W, counter1)
-        for (int s=0; s<PART ; s++){
-            
+        // for (int s=0; s<PART ; s++){    
             // #pragma omp parallel for private (counter1)
-   	        for(uint32_t i=0;i< (m_size)/PART; i++){ 
+            // for(uint32_t i=0;i< (m_size)/PART; i++){ 
+   	        for(uint32_t i=0;i< (max_rows_per_dpu * nr_of_dpus * n_size_pad); i++){ 
+		        counter1[i] = (uint8_t)(0+(i*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+            }
+            AES_init_ctx(&ctx, key);
+            AES_ECB_encrypt(&ctx, counter1);
+
+            for(uint32_t i=0;i< (m_size); i++){ 
+                Y_host[(i)]=0;
+            // for(uint32_t i=0;i< (m_size)/PART; i++){ 
                 for (unsigned int k = 0; k < n_size; k++) {
-		        counter1[(i*(n_size))+k] = (uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                    Y_host[(i)] += counter1[(i*(n_size))+k] * W_dpu_fp[k]; 
                 }
             }
-            // AES_CTR_xcrypt_buffer(&ctx,counter1, m_size * n_size/PART);
-            AES_ECB_encrypt(&ctx, counter1);
-            
-            for(uint32_t i=0;i< (m_size)/PART; i++){ 
-                for (unsigned int k = 0; k < n_size; k++) {
-                    Y_host[((s*(m_size/PART))+i)] += counter1[(i*(n_size))+k] * W[k]; 
-            }
-            }
-        }
-
-        // end1=clock();
          stop(&timer, 6);
-        // cpu_run += (double) ((end1 - start1)) *1000.0 / CLOCKS_PER_SEC;
-        //end of running on cpu
-        // printf("cpu done\n");
 
         // Run DPU kernel
         start(&timer, 3, rep); 
@@ -538,9 +507,7 @@ int main(int argc, char **argv) {
         DPU_ASSERT(dpu_probe_start(&probe)); 
         #endif
         // Launch kernel 
-        // printf("dpu launch\n");
         DPU_ASSERT(dpu_launch(dpu_set, DPU_SYNCHRONOUS)); 
-        // printf("dpu done\n");
         stop(&timer, 3); 
 
         #if ENERGY
@@ -550,18 +517,17 @@ int main(int argc, char **argv) {
 
 #if PRINT
         {
-            if (rep%200 == 0) {
+            if (rep == 0) {
                 unsigned int each_dpu = 0;
                 printf("Display DPU Logs\n");
                 DPU_FOREACH (dpu_set, dpu) {
-                    printf("DPU#%d:\n", each_dpu);
+                    if(each_dpu==0)printf("DPU#%d:\n", each_dpu);
                     DPU_ASSERT(dpulog_read_for_dpu(dpu.dpu, stdout));
                     each_dpu++;
                 }
             }
         }
 #endif
-        // printf("Run done\n");
         start(&timer, 4, rep); // DPU-CPU time 
         DPU_FOREACH(dpu_set, dpu, i) {
             DPU_ASSERT(dpu_prepare_xfer(dpu, Y_dpu + dpu_info[i].prev_rows_dpu)); 
@@ -569,46 +535,27 @@ int main(int argc, char **argv) {
         DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, "dot_product_t", 0, max_rows_per_dpu  * sizeof(T), \
             DPU_XFER_DEFAULT));
         stop(&timer, 4); // DPU-CPU time 
-        // printf("dot sent\n");
-
-        //merging the results
-        // start2 = clock(); 
         start(&timer, 7, rep);
+        
         for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus ; i++){
-		    Y_total[i] = Y_dpu[i] - Y_host[i];
+		    Y_total[i] = Y_dpu[i] + Y_host[i];
         }
-        // end2=clock();
-        // merge += ((double) (end2 - start2)) *1000.0 / CLOCKS_PER_SEC;
+        if(rep==1 || rep==0){
+                for(int i=0; i<10; i++){
+                    printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", Y_dpu[i],Y_host[i],Y_total[i], y_expected[rep][i]);
+                }
+        }
+        
         stop(&timer, 7);
 
         int s1=10;
-        // mpz_t result, base;
-        
-        // mpz_init_set_str(base, "10", 10);
         T verif=0;
-        // printf("threads: %d", omp_get_thread_num());
-        // T verif[16]={0};
-        // clock_t verif_start_time2 = clock();
-        // printf("verif\n");
         start(&timer, 8, rep);
-        // int num_threads = omp_get_max_threads();
-        // omp_set_num_threads(num_threads);
-        int powers = 1;//power(s1,m_size);
-        // #pragma omp parallel for reduction(+:verif)
+        int powers = 1;
 		for (int i = 0; i < m_size; i++){
-            // unsigned long int exponent = i;
-            // mpz_init(result);
-            // mpz_pow_ui(result, base, exponent);
             powers *= s1;
-            verif+= (Y_total[i]) * powers;//power(s1,i);
-                //verif+= (Y_total[i]) * pow(s1,i);
-                // verif+= (Y_total[i]) * fast_pow(s1,i);
-            // mpz_clear(result);
-            
+            verif+= (Y_total[i]) * powers;
    	     }
-        // mpz_clear(base);
-        // clock_t verif_end_time2 = clock();
-        // verif1 += (double)(verif_end_time2 - verif_start_time2) *1000/ CLOCKS_PER_SEC;
         stop(&timer, 8);
         //send result to DPU
         i = 0;
@@ -620,7 +567,6 @@ int main(int argc, char **argv) {
         }
         DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "mode", 0, \
         sizeof(uint32_t), DPU_XFER_DEFAULT));
-        // printf("op mode sent\n");
         i = 0;
         //end mode
         DPU_FOREACH(dpu_set, dpu, i) {
@@ -629,10 +575,8 @@ int main(int argc, char **argv) {
         }
         DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "total_prod", 0,max_rows_per_dpu  * sizeof(T), \
             DPU_XFER_DEFAULT));
-        // printf("total prod  sent\n");
 
         stop(&timer, 2);
- 
         // Run DPU kernel
         start(&timer, 3, rep); 
         #if ENERGY
@@ -666,60 +610,29 @@ int main(int argc, char **argv) {
 
 AES_init_ctx(&ctx, key);
 
-uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad / PART) * sizeof(uint8_t));
+uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad) * sizeof(uint8_t));
 
 start(&timer, 9, rep);
 
 //  #pragma omp parallel for shared(Y, Y_total, gradient_cpu) private(counter2)
-for (int s = 0; s < PART; s++) {
-    for (uint32_t i = 0; i < m_size / PART; ++i) {
-        for (unsigned int k = 0; k < n_size; ++k) {
-            counter2[(i * n_size) + k] = (uint8_t)(bufferX + (k * sizeof(T)));
+// for (int s = 0; s < PART; s++) {
+    for (uint32_t i = 0; i < m_size ; i++) { //  / PART
+        for (unsigned int k = 0; k < n_size; k++) {
+            counter2[(i * n_size) + k] = (uint8_t)(0+(((i * n_size) + k)*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
         }
     }
 
     AES_ECB_encrypt(&ctx, counter2);
 
-    for (uint32_t i = 0; i < m_size / PART; ++i) {
-        for (unsigned int k = 0; k < n_size; ++k) {
-            // avoid overflow
-            int offset = s * (m_size / PART) + i;
-            gradient_cpu[k] -= counter2[(i * n_size) + k] * (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT + OVERFLOW_SHIFT));
+    for (uint32_t i = 0; i < m_size; i++) {//  / PART
+        for (unsigned int k = 0; k < n_size; k++) {
+            // int offset = s * (m_size / PART) + i;
+            gradient_cpu[k] -= counter2[(i * n_size) + k] * (Y[i] - (Y_total[i] >>
+                    SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
         }
     }
-}
 
-        // T* gradient_cpu = calloc(n_size, sizeof(T)); 
-        
-        // AES_init_ctx(&ctx, key);
-        // // start3=clock();
-        // uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad/PART) * sizeof(uint8_t));
-        // start(&timer, 9, rep);
-        // for (int s=0; s<PART ; s++){
-        //     // #pragma omp parallel for
-        //     for (uint32_t i = 0; i < m_size/PART; ++i) {
-        //         for (unsigned int k = 0; k < n_size; ++k) {
-        //             counter2[(i*(n_size))+k]= (uint8_t)(bufferX + (k * sizeof(T)));// (uint8_t) &bufferX[(s*m_size*n_size/PART)+(j*n_size+l)];
-                    
-        //         }
-        //     }
-        //     AES_ECB_encrypt(&ctx, counter2);
-        //     // printf("hi\n");
-        //     // #pragma omp parallel for
-        //     for (uint32_t i = 0; i < m_size/PART; ++i) {
-        //         for (unsigned int k = 0; k < n_size; ++k) {
-        //         // avoid overflow
-        //             gradient_cpu[k] -= counter2[(i*(n_size))+k] * (Y[((s*(m_size/PART))+i)]-(Y_total[s*(m_size/PART)+i]>>
-        //             SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
-        //         }
-        //     }
-
-
-        // }
         stop(&timer, 9);
-        // free(gradient_cpu);
-        // end3=clock();
-        // cpu_run2 += ((double) (end3 - start3)) *1000.0 / CLOCKS_PER_SEC;
 
         // Retrive result
         start(&timer, 4, rep); // DPU-CPU time 
@@ -744,28 +657,28 @@ for (int s = 0; s < PART; s++) {
                 #endif 
             }
         } 
-
         //merge 
         // start4 = clock();
         start(&timer, 10, rep);
         for (uint32_t x = 0; x < n_size; ++x) {
             total_gradient[x]= gradient_dpu[x] + gradient_cpu[x];
+            
         }
-        // end4=clock();
-        // merge2 += ((double) (end4 - start4))*1000.0 / CLOCKS_PER_SEC;
+        if(rep==1 || rep == 0){
+                for(int i=0; i<10; i++){
+                    printf("gd_d: %d, gd_c: %d, gd_t: %d, gd_expexted: %d, y_real:%d \n", gradient_dpu[i],gradient_cpu[i],total_gradient[i], gd_expected[rep][i], bufferY[i]);
+                }
+            }
+        
         stop(&timer,10);
         int s2=10;
         T verifi=0;
-        // clock_t verif_start_time1 = clock();
         start(&timer, 11, rep);
 		for (int i = 0; i < n_size; i++){
        			 verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
         
    	     }
         stop(&timer, 11);
-        // clock_t verif_end_time1 = clock();
-        // verif2 += (((double)(verif_end_time1 - verif_start_time1)) *1000 )/ CLOCKS_PER_SEC;
-
 
         // Update weight 
         for (uint32_t m = 0; m < n_size; ++m) { 
@@ -785,7 +698,6 @@ for (int s = 0; s < PART; s++) {
 
         if (rep % 100 == 0)
             printf("DPU iter %d...\n", rep); 
-
     } // iter end 
 
     // Print trained weight at host 
