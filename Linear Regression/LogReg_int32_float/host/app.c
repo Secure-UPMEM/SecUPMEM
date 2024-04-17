@@ -34,7 +34,9 @@
 #include <dpu_probe.h>
 #endif
 
-#define PART 10
+//you need to find the best partitioning for each input to make sure that the CPU wil not be the bottleneck
+#define PART1 200
+#define PART2 100
 // Pointer declaration
 static T* X;
 static T* X_C;
@@ -481,24 +483,26 @@ int main(int argc, char **argv) {
 
         // // #pragma omp parallel for shared(W, counter1)
         // for (int s=0; s<PART ; s++){
-        uint8_t* counter1 = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(uint8_t));
+        uint8_t* counter1 = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART1 * sizeof(uint8_t));
         // #pragma omp parallel for shared(W, counter1)
-        // for (int s=0; s<PART ; s++){    
-            // #pragma omp parallel for private (counter1)
-            // for(uint32_t i=0;i< (m_size)/PART; i++){ 
-   	        for(uint32_t i=0;i< (max_rows_per_dpu * nr_of_dpus * n_size_pad); i++){ 
-		        counter1[i] = (uint8_t)(0+(i*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
-            }
-            AES_init_ctx(&ctx, key);
-            AES_ECB_encrypt(&ctx, counter1);
-
-            for(uint32_t i=0;i< (m_size); i++){ 
-                Y_host[(i)]=0;
-            // for(uint32_t i=0;i< (m_size)/PART; i++){ 
+        for (int s = 0; s < PART1; s++) {
+            for (uint32_t i = 0; i < m_size/ PART1 ; i++) { //  
                 for (unsigned int k = 0; k < n_size; k++) {
-                    Y_host[(i)] += counter1[(i*(n_size))+k] * W_dpu_fp[k]; 
+                    // counter[i] = (uint8_t)(0+(i*sizeof(T)));
+                    counter1[(i * n_size) + k] = (uint8_t)(0+((((s * (m_size / PART1) + i) * n_size) + k)*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
                 }
             }
+            // AES_init_ctx(&ctx, key);
+            AES_ECB_encrypt(&ctx, counter1);
+
+            for(uint32_t i=0;i< (m_size/PART1); i++){ 
+                Y_host[( s * (m_size / PART1) + i)]=0;
+            // for(uint32_t i=0;i< (m_size)/PART; i++){ 
+                for (unsigned int k = 0; k < n_size; k++) {
+                    Y_host[( s * (m_size / PART1) + i)] += counter1[(i*(n_size))+k] * W_dpu_fp[k]; 
+                }
+            }
+        }
          stop(&timer, 6);
 
         // Run DPU kernel
@@ -605,32 +609,32 @@ int main(int argc, char **argv) {
         }
 #endif
         //kernel on cpu
-
         T* gradient_cpu = calloc(n_size, sizeof(T));
+        AES_init_ctx(&ctx, key);
 
-AES_init_ctx(&ctx, key);
+        uint8_t* counter2 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART2 )* sizeof(uint8_t));
+        // uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad)* sizeof(uint8_t));
 
-uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad) * sizeof(uint8_t));
+        start(&timer, 9, rep);
 
-start(&timer, 9, rep);
+        //  #pragma omp parallel for shared(Y, Y_total, gradient_cpu) private(counter2)
+        for (int s = 0; s < PART2; s++) {
+            for (uint32_t i = 0; i < m_size/ PART2 ; i++) { //  
+                for (unsigned int k = 0; k < n_size; k++) {
+                    counter2[(i * n_size) + k] = (uint8_t)(0+((((s * (m_size / PART2) + i) * n_size) + k)*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                }
+            }
 
-//  #pragma omp parallel for shared(Y, Y_total, gradient_cpu) private(counter2)
-// for (int s = 0; s < PART; s++) {
-    for (uint32_t i = 0; i < m_size ; i++) { //  / PART
-        for (unsigned int k = 0; k < n_size; k++) {
-            counter2[(i * n_size) + k] = (uint8_t)(0+(((i * n_size) + k)*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+            AES_ECB_encrypt(&ctx, counter2);
+
+            for (uint32_t i = 0; i < m_size/ PART2; i++) {//  
+                int offset = s * (m_size / PART2) + i;
+                for (unsigned int k = 0; k < n_size; k++) {
+                    gradient_cpu[k] -= counter2[(i * n_size) + k] * (Y[offset] - (Y_total[offset] >>
+                            SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
+                }
+            }
         }
-    }
-
-    AES_ECB_encrypt(&ctx, counter2);
-
-    for (uint32_t i = 0; i < m_size; i++) {//  / PART
-        for (unsigned int k = 0; k < n_size; k++) {
-            // int offset = s * (m_size / PART) + i;
-            gradient_cpu[k] -= counter2[(i * n_size) + k] * (Y[i] - (Y_total[i] >>
-                    SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
-        }
-    }
 
         stop(&timer, 9);
 

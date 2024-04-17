@@ -32,6 +32,8 @@
 #include <dpu_probe.h>
 #endif
 
+#define PART 80
+#define PART2 20
 // Pointer declaration
 static T* X;
 static T* Y;
@@ -583,19 +585,32 @@ int main(int argc, char **argv) {
     AES_init_ctx(&ctx, key);
     start(&timer, 6, rep);
 
-    uint8_t* counter1 = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(uint8_t));
-    for(uint32_t i=0;i< (max_rows_per_dpu * nr_of_dpus * n_size_pad); i++){ 
-        counter1[i] = (uint8_t)(0+(i*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
-    }
-    AES_ECB_encrypt(&ctx, counter1);
-    for(uint32_t i=0;i< (m_size); i++){ 
-        Y_host[(i)]=0;
-        // for(uint32_t i=0;i< (m_size)/PART; i++){ 
+    uint8_t* counter1 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
+
+    for(uint32_t s=0; s < (PART); s++){ 
+        // printf("ok1\n");
+        for(uint32_t i=0; i < (m_size/PART); i++){ 
             for (unsigned int k = 0; k < n_size; k++) {
-                Y_host[(i)] += counter1[(i*(n_size))+k] * W_dpu_fp[k]; 
+                // printf("ok2\n");
+        // for(uint32_t i=0;i< (max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART; i++){ 
+            counter1[i*n_size+k] = (uint8_t)(0+((((((m_size)/PART)*s+i)*n_size)+k )*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+         }
+        //  printf("ok6\n");
+        }
+        // printf("ok3\n");
+        AES_ECB_encrypt(&ctx, counter1);
+        for(uint32_t i=0;i < (m_size)/PART; i++){ 
+            
+            Y_host[((s*(m_size/PART))+i)]=0;
+            // printf("ok4\n");
+            // for(uint32_t i=0;i< (n_size)/PART; i++){ 
+                for (unsigned int k = 0; k < n_size; k++) {
+                    Y_host[(s*(m_size/PART))+i] += counter1[i*n_size+k] * W_dpu_fp[k]; 
+                    // printf("ok5\n");
+                }
             }
-        // }
-    }
+        }
+    // }
     stop(&timer, 6);
 
     // Run DPU kernel
