@@ -14,14 +14,14 @@
 #include "../support/common.h"
 
 __host dpu_arguments_t DPU_INPUT_ARGUMENTS;  
-__host uint8_t b1[NR_TASKLETS*MAX_ROWS];
-__host uint8_t b2[NR_TASKLETS*MAX_ROWS];
+__host uint16_t b1[NR_TASKLETS*MAX_ROWS];
+__host uint16_t b2[NR_TASKLETS*MAX_ROWS];
 //new added
 __host uint32_t op_mode;
 __host T dot_product_t[NR_TASKLETS*MAX_ROWS];
 __host T dot_product_temp[NR_TASKLETS][MAX_ROWS];
 // __host T sigmoid_tmp[NR_TASKLETS][MAX_ROWS];
-__host T sigmoid_tmp[NR_TASKLETS*MAX_ROWS];
+__host T sigmoid_tmp[NR_TASKLETS][MAX_ROWS];
 //end
 __mram_noinit T DPU_RESULTS[MAX_ROWS]; // partial gradient in each DPU, max number of rows = 16 
 // __mram_noinit T DPU_PRODUCT[MAX_ROWS*NR_TASKLETS];
@@ -187,18 +187,18 @@ int main() {
             //end
 
             else if(op_mode == 1){
-                // if((~b1[(row_index*rows_per_cache)+y_index] & b2[(row_index*rows_per_cache)+y_index]) == 1) sigmoid_tmp[tasklet_id][row_index]= dot_product_temp[tasklet_id][row_index];
-                // else if(b2[(row_index*rows_per_cache)+y_index] == 1) sigmoid_tmp[tasklet_id][row_index]= 0;
-                // else sigmoid_tmp[tasklet_id][row_index]= 1;
+                if((~b1[(row_index*rows_per_cache)+y_index] & b2[(row_index*rows_per_cache)+y_index]) == 1) sigmoid_tmp[tasklet_id][row_index]= dot_product_temp[tasklet_id][row_index];
+                else if(b2[(row_index*rows_per_cache)+y_index] == 1) sigmoid_tmp[tasklet_id][row_index]= 0;
+                else sigmoid_tmp[tasklet_id][row_index]= 1;
                 // printf("%d\n",  sigmoid_tmp[tasklet_id][row_index] );
                 // compute gradient 
                 // TODO: unroll the loop 
                     for (unsigned int l = 0; l < n_size; ++l) {
                     #ifdef FLOAT 
-                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[ow_index]- cache_Y[y_index]); 
+                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[tasklet_id][row_index]- cache_Y[y_index]); 
 
                     #else // int, fixed-pointed  
-                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[row_index] - \
+                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[tasklet_id][row_index] - \
                         (cache_Y[y_index]<<SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + SHIFT_AMOUNT); 
                     #endif
                 }

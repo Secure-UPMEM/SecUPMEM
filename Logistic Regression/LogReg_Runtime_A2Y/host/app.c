@@ -686,14 +686,14 @@ int main(int argc, char **argv) {
         // # else 
         // T sigmoid = sigmoid_dpu_fp((float) (dot_product_t>>SHIFT_AMOUNT) / (SHIFT_MASK+1)); 
         // # endif
-        // sumplus[j]=0.5+product[j];
-        // sumin[j]=product[j]-0.5;
-        // if(sumplus[j]>0) b1[j]=0;
-        // else b1[j]=1;
-        // if(sumin[j]>0) b2[j]=0;
-        // else b2[j]=1;
+        sumplus[j]=0.5+product[j];
+        sumin[j]=product[j]-0.5;
+        if(sumplus[j]>0) b1[j]=0;
+        else b1[j]=1;
+        if(sumin[j]>0) b2[j]=0;
+        else b2[j]=1;
         // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j])));
-        sigmoid[j] = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp((double) -(Y_total[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
+        // sigmoid[j] = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp((double) -(Y_total[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
     }
     // printf("b1");
     // for( int j=0; j<max_rows_per_dpu * nr_of_dpus ; j++){
@@ -719,27 +719,27 @@ int main(int argc, char **argv) {
     i = 0;
     // operation_mode=1;
     // printf("mode send\n");
-    // DPU_FOREACH(dpu_set, dpu, i) {
-    // // Copy input arguments to DPU
-    //     DPU_ASSERT(dpu_prepare_xfer(dpu, b1 + dpu_info[i].prev_rows_dpu));
-    // }
-    // DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b1", 0, \
-    // max_rows_per_dpu  * sizeof(uint8_t), DPU_XFER_DEFAULT));
-    // // printf("B1 send\n");
-    // i=0;
-    // DPU_FOREACH(dpu_set, dpu, i) {
-    // // Copy input arguments to DPU
-    //     DPU_ASSERT(dpu_prepare_xfer(dpu, b2 +  dpu_info[i].prev_rows_dpu));
-    // }
-    // DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b2", 0, \
-    // max_rows_per_dpu * sizeof(uint8_t), DPU_XFER_DEFAULT));
-
     DPU_FOREACH(dpu_set, dpu, i) {
     // Copy input arguments to DPU
-        DPU_ASSERT(dpu_prepare_xfer(dpu, sigmoid + dpu_info[i].prev_rows_dpu));
+        DPU_ASSERT(dpu_prepare_xfer(dpu, b1 + dpu_info[i].prev_rows_dpu));
     }
-    DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "sigmoid_tmp", 0, \
-    max_rows_per_dpu  * sizeof(T), DPU_XFER_DEFAULT));
+    DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b1", 0, \
+    max_rows_per_dpu  * sizeof(uint16_t), DPU_XFER_DEFAULT));
+    // printf("B1 send\n");
+    i=0;
+    DPU_FOREACH(dpu_set, dpu, i) {
+    // Copy input arguments to DPU
+        DPU_ASSERT(dpu_prepare_xfer(dpu, b2 +  dpu_info[i].prev_rows_dpu));
+    }
+    DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b2", 0, \
+    max_rows_per_dpu * sizeof(uint16_t), DPU_XFER_DEFAULT));
+
+    // DPU_FOREACH(dpu_set, dpu, i) {
+    // // Copy input arguments to DPU
+    //     DPU_ASSERT(dpu_prepare_xfer(dpu, sigmoid + dpu_info[i].prev_rows_dpu));
+    // }
+    // DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "sigmoid_tmp", 0, \
+    // max_rows_per_dpu  * sizeof(T), DPU_XFER_DEFAULT));
 
     // printf("B2 send\n");
     // // printf("sigmoid\n");
