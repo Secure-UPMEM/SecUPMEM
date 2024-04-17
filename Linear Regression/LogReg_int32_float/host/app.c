@@ -541,7 +541,7 @@ int main(int argc, char **argv) {
 		    Y_total[i] = Y_dpu[i] + Y_host[i];
         }
         if(rep==1 || rep==0){
-                for(int i=0; i<10; i++){
+                for(int i= (max_rows_per_dpu * nr_of_dpus -10); i<max_rows_per_dpu * nr_of_dpus; i++){
                     printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", Y_dpu[i],Y_host[i],Y_total[i], y_expected[rep][i]);
                 }
         }

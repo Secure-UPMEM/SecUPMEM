@@ -119,7 +119,7 @@ int main() {
                 // gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * ((cache_Y[y_index] \
                 //     << SHIFT_AMOUNT) - dot_product_t) >> SHIFT_AMOUNT; 
                 gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * (cache_Y[y_index] - 
-                    (total_prod[(row_index*rows_per_cache)+y_index] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + SHIFT_AMOUNT); 
+                    (total_prod[(row_index*rows_per_tasklet)+y_index] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + SHIFT_AMOUNT); 
                 #endif
             }
             }
