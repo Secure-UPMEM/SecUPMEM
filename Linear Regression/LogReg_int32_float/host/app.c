@@ -35,8 +35,8 @@
 #endif
 
 //you need to find the best partitioning for each input to make sure that the CPU wil not be the bottleneck
-#define PART1 200
-#define PART2 100
+#define PART1 80
+#define PART2 160
 // Pointer declaration
 static T* X;
 static T* X_C;
@@ -344,7 +344,7 @@ int main(int argc, char **argv) {
     X_D = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T)); 
     Y = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T));
     T** y_expected = malloc(iter_time * sizeof(T*)); 
-    for(int i=0; i< iter_time; i++){
+    for(unsigned int i=0; i< iter_time; i++){
         y_expected[i] = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T));
     }
     T* Y_host = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
@@ -378,7 +378,7 @@ int main(int argc, char **argv) {
     T* gradient_dpu_tmp = malloc(n_size_pad * nr_of_dpus * sizeof(T));
 
     T** gd_expected = malloc(iter_time * sizeof(T*)); 
-    for(int i=0; i< iter_time; i++){
+    for(unsigned int i=0; i< iter_time; i++){
         gd_expected[i] = malloc(n_size * sizeof(T));
     }
     // Timer declaration
@@ -487,19 +487,20 @@ int main(int argc, char **argv) {
         // #pragma omp parallel for shared(W, counter1)
         for (int s = 0; s < PART1; s++) {
             for (uint32_t i = 0; i < m_size/ PART1 ; i++) { //  
+                int offset = s * (m_size / PART1) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
+                    int local_off = i * n_size + k;
                     // counter[i] = (uint8_t)(0+(i*sizeof(T)));
-                    counter1[(i * n_size) + k] = (uint8_t)(0+((((s * (m_size / PART1) + i) * n_size) + k)*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                    counter1[local_off] = (uint8_t)(0+(((offset * n_size) + k) * sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
                 }
             }
-            // AES_init_ctx(&ctx, key);
             AES_ECB_encrypt(&ctx, counter1);
 
             for(uint32_t i=0;i< (m_size/PART1); i++){ 
-                Y_host[( s * (m_size / PART1) + i)]=0;
-            // for(uint32_t i=0;i< (m_size)/PART; i++){ 
+                int offset = s * (m_size / PART1) + i;
+                Y_host[offset]=0;
                 for (unsigned int k = 0; k < n_size; k++) {
-                    Y_host[( s * (m_size / PART1) + i)] += counter1[(i*(n_size))+k] * W_dpu_fp[k]; 
+                    Y_host[offset] += counter1[(i*(n_size))+k] * W_dpu_fp[k]; 
                 }
             }
         }
@@ -544,11 +545,11 @@ int main(int argc, char **argv) {
         for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus ; i++){
 		    Y_total[i] = Y_dpu[i] + Y_host[i];
         }
-        if(rep==1 || rep==0){
-                for(int i= (max_rows_per_dpu * nr_of_dpus -10); i<max_rows_per_dpu * nr_of_dpus; i++){
-                    printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", Y_dpu[i],Y_host[i],Y_total[i], y_expected[rep][i]);
-                }
-        }
+        // if(rep==1 || rep==0){
+        //         for(int i= (max_rows_per_dpu * nr_of_dpus -10); i<max_rows_per_dpu * nr_of_dpus; i++){
+        //             printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", Y_dpu[i],Y_host[i],Y_total[i], y_expected[rep][i]);
+        //         }
+        // }
         
         stop(&timer, 7);
 
@@ -556,7 +557,7 @@ int main(int argc, char **argv) {
         T verif=0;
         start(&timer, 8, rep);
         int powers = 1;
-		for (int i = 0; i < m_size; i++){
+		for (unsigned int i = 0; i < m_size; i++){
             powers *= s1;
             verif+= (Y_total[i]) * powers;
    	     }
@@ -619,9 +620,11 @@ int main(int argc, char **argv) {
 
         //  #pragma omp parallel for shared(Y, Y_total, gradient_cpu) private(counter2)
         for (int s = 0; s < PART2; s++) {
+            // #pragma omp parallel for
             for (uint32_t i = 0; i < m_size/ PART2 ; i++) { //  
+                int offset = s * (m_size / PART2) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
-                    counter2[(i * n_size) + k] = (uint8_t)(0+((((s * (m_size / PART2) + i) * n_size) + k)*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                    counter2[(i * n_size) + k] = (uint8_t)((((offset * n_size) + k)*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
                 }
             }
 
@@ -631,10 +634,14 @@ int main(int argc, char **argv) {
                 int offset = s * (m_size / PART2) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
                     gradient_cpu[k] -= counter2[(i * n_size) + k] * (Y[offset] - (Y_total[offset] >>
-                            SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
+                            SHIFT_AMOUNT)); // y with offset
                 }
             }
         }
+        for (unsigned int k = 0; k < n_size; k++) {
+            gradient_cpu[k]= gradient_cpu[k] >> (SHIFT_AMOUNT + OVERFLOW_SHIFT);
+        }
+                
 
         stop(&timer, 9);
 
@@ -668,17 +675,17 @@ int main(int argc, char **argv) {
             total_gradient[x]= gradient_dpu[x] + gradient_cpu[x];
             
         }
-        if(rep==1 || rep == 0){
-                for(int i=0; i<10; i++){
-                    printf("gd_d: %d, gd_c: %d, gd_t: %d, gd_expexted: %d, y_real:%d \n", gradient_dpu[i],gradient_cpu[i],total_gradient[i], gd_expected[rep][i], bufferY[i]);
-                }
-            }
+        // if(rep==1 || rep == 0){
+        //         for(int i=0; i<10; i++){
+        //             printf("gd_d: %d, gd_c: %d, gd_t: %d, gd_expexted: %d, y_real:%d \n", gradient_dpu[i],gradient_cpu[i],total_gradient[i], gd_expected[rep][i], bufferY[i]);
+        //         }
+        //     }
         
         stop(&timer,10);
-        int s2=10;
+        // int s2=10;
         T verifi=0;
         start(&timer, 11, rep);
-		for (int i = 0; i < n_size; i++){
+		for (unsigned int i = 0; i < n_size; i++){
        			 verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
         
    	     }
