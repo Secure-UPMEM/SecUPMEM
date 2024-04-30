@@ -35,7 +35,7 @@
 #endif
 
 //you need to find the best partitioning for each input to make sure that the CPU wil not be the bottleneck
-#define PART1 80
+#define PART1 160
 #define PART2 160
 // Pointer declaration
 static T* X;
@@ -207,12 +207,14 @@ static void GD_host_fp(T* X, T* Y, T* W, T** y_expected,T** gd_expected, uint32_
 #endif 
 static void GD_host_fp_test(T* X, T* Y, T* dot_product,T* gd_expected, uint32_t m_size, uint32_t n_size) {
 T* gradient_tmp = calloc(n_size, sizeof(T));
+// printf("1\n");
     for (uint32_t j = 0; j < m_size; ++j) {
-         
+        //  printf("2\n");
             for (unsigned int l = 0; l < n_size; ++l) {
                 // avoid overflow
-                gradient_tmp[l] -= X[j*n_size + l] * (Y[j]-(dot_product[j]>>
-                    SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
+                // printf("3\n");
+
+                gradient_tmp[l] -= X[j*n_size + l] * (Y[j]-(dot_product[j]>> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
             }
  // gradient done 
             
@@ -400,7 +402,7 @@ int main(int argc, char **argv) {
     uint8_t* counter = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(uint8_t));
     // #pragma omp parallel for
    	for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus * n_size_pad; i++){
-		counter[i] = (uint8_t)(0+(i*sizeof(T)));//(uint8_t)(bufferX+(i*sizeof(T)));
+		counter[i] = (uint8_t)((i*sizeof(T)));//(uint8_t)(bufferX+(i*sizeof(T)));
     }
 
     AES_init_ctx(&ctx, key);
@@ -542,6 +544,7 @@ int main(int argc, char **argv) {
         stop(&timer, 4); // DPU-CPU time 
         start(&timer, 7, rep);
         
+        // #pragma parallel for
         for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus ; i++){
 		    Y_total[i] = Y_dpu[i] + Y_host[i];
         }
@@ -633,14 +636,13 @@ int main(int argc, char **argv) {
             for (uint32_t i = 0; i < m_size/ PART2; i++) {//  
                 int offset = s * (m_size / PART2) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
-                    gradient_cpu[k] -= counter2[(i * n_size) + k] * (Y[offset] - (Y_total[offset] >>
-                            SHIFT_AMOUNT)); // y with offset
+                    gradient_cpu[k] -= counter2[(i * n_size) + k] * (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
                 }
             }
         }
-        for (unsigned int k = 0; k < n_size; k++) {
-            gradient_cpu[k]= gradient_cpu[k] >> (SHIFT_AMOUNT + OVERFLOW_SHIFT);
-        }
+        // for (unsigned int k = 0; k < n_size; k++) {
+        //     gradient_cpu[k]= gradient_cpu[k] >> (SHIFT_AMOUNT + OVERFLOW_SHIFT);
+        // }
                 
 
         stop(&timer, 9);
@@ -675,6 +677,7 @@ int main(int argc, char **argv) {
             total_gradient[x]= gradient_dpu[x] + gradient_cpu[x];
             
         }
+        GD_host_fp_test(X_D, bufferY, Y_total , gd_expected[rep], m_size, n_size);
         // if(rep==1 || rep == 0){
         //         for(int i=0; i<10; i++){
         //             printf("gd_d: %d, gd_c: %d, gd_t: %d, gd_expexted: %d, y_real:%d \n", gradient_dpu[i],gradient_cpu[i],total_gradient[i], gd_expected[rep][i], bufferY[i]);

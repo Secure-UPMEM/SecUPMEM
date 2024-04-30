@@ -195,10 +195,10 @@ int main() {
                 // TODO: unroll the loop 
                     for (unsigned int l = 0; l < n_size; ++l) {
                     #ifdef FLOAT 
-                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[ow_index]- cache_Y[y_index]); 
+                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[row_index*rows_per_tasklet+row_index]- cache_Y[y_index]); 
 
                     #else // int, fixed-pointed  
-                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[row_index] - \
+                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[(row_index*rows_per_cache) + y_index] - \
                         (cache_Y[y_index]<<SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + SHIFT_AMOUNT); 
                     #endif
                 }

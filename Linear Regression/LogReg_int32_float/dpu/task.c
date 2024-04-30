@@ -15,13 +15,13 @@
 
 __host dpu_arguments_t DPU_INPUT_ARGUMENTS; 
 __host uint32_t mode;  
-__host T dot_product_t[2*NR_TASKLETS*MAX_ROWS];
-__host T dot_product_temp[NR_TASKLETS][2*MAX_ROWS];
-__host T total_prod[2*MAX_ROWS*NR_TASKLETS];
+__host T dot_product_t[NR_TASKLETS*MAX_ROWS];
+__host T dot_product_temp[NR_TASKLETS][MAX_ROWS];
+__host T total_prod[MAX_ROWS*NR_TASKLETS];
 
 __mram_noinit T DPU_RESULTS[MAX_ROWS]; // partial gradient in each DPU, max number of rows = 16 
 
-__dma_aligned T gradient_tmp[2*MAX_ROWS*NR_TASKLETS]; // tasklet major storage 
+__dma_aligned T gradient_tmp[MAX_ROWS*NR_TASKLETS]; // tasklet major storage 
 
 // Dot product 
 static T dot_product(T *bufferX, T *bufferW, uint32_t length) {
@@ -107,21 +107,27 @@ int main() {
             // compute dot product
                 // dot_product_t[(row_index*rows_per_cache)+y_index] = dot_product(cache_X + x_index, cache_W, n_size); 
                 dot_product_temp[tasklet_id][row_index] = dot_product(cache_X + x_index, cache_W, n_size);
-            }
+            // printf( "offset1:%d", tasklet_id*(rows_per_tasklet) + row_index);
             // compute gradient 
             // TODO: unroll the loop
+            }
             else if(mode == 1){
+                // printf("start  mode2\n");
             for (unsigned int l = 0; l < n_size; ++l) {
                 #ifdef FLOAT 
                 gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * (cache_Y[y_index] - \ 
-                    total_prod[(row_index*rows_per_cache)+y_index]); 
+                    total_prod[tasklet_offset+(row_index*rows_per_cache)+y_index]); 
+                
                 #else // int, fixed-pointed  
                 // gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * ((cache_Y[y_index] \
                 //     << SHIFT_AMOUNT) - dot_product_t) >> SHIFT_AMOUNT; 
-                gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * (cache_Y[y_index] - 
-                    (total_prod[(row_index*rows_per_tasklet)+y_index] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + SHIFT_AMOUNT); 
+                gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * (cache_Y[y_index] - \
+                    (total_prod[tasklet_id*(rows_per_tasklet) + row_index] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + SHIFT_AMOUNT); 
+                // printf( "offset2:%d \n", tasklet_id*(rows_per_tasklet) + row_index);
+                
                 #endif
             }
+            // printf("\n");
             }
             x_index += n_size; 
             // # if PRINT
@@ -136,6 +142,7 @@ int main() {
             // }
             // # endif
         } // end cache_Y 
+        // printf("loop1\n");
     } // access all rows 
 
     // Barrier
@@ -163,7 +170,7 @@ int main() {
     if(mode==1){
     // Reduction 
     if (tasklet_id == 0) {
-        for (unsigned int each_tasklet = 1; each_tasklet < NR_TASKLETS; each_tasklet++){
+        for (unsigned int each_tasklet = 0; each_tasklet < NR_TASKLETS; each_tasklet++){
             for (unsigned int each_attribute = 0; each_attribute < n_size; each_attribute++) {
                 gradient_tmp[each_attribute] += gradient_tmp[each_tasklet*n_size_pad + each_attribute]; 
             }

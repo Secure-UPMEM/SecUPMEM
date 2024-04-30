@@ -806,11 +806,18 @@ int main(int argc, char **argv) {
             for (unsigned int k = 0; k < n_size; k++) {
                 
                 gradient_cpu[k] -= counter2[(i * n_size) + k] * (sigmoid[offset] - (Y_total[offset] <<
-                        SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
+                        SHIFT_AMOUNT)) ; // y with offset
             // gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - \
             //             (Y[j]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 
                 
             }
+        }
+        for (unsigned int k = 0; k < n_size; k++) {
+            
+            gradient_cpu[k] = gradient_cpu[k] >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
+        // gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - \
+        //             (Y[j]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 
+            
         }
     }
     stop(&timer, 8);
@@ -858,10 +865,10 @@ int main(int argc, char **argv) {
     for (uint32_t m = 0; m < n_size; ++m) { 
         #ifdef FLOAT 
         // float 
-        W_dpu[m] = W_dpu[m] - (gradient_dpu[m]*learning_rate); 
+        W_dpu[m] = W_dpu[m] - (total_gradient[m]*learning_rate); 
         #else 
         // int 
-        W_dpu_fp[m] = W_dpu_fp[m] - (gradient_dpu[m]*learning_rate) / (m_size >> OVERFLOW_SHIFT); 
+        W_dpu_fp[m] = W_dpu_fp[m] - (total_gradient[m]*learning_rate) / (m_size >> OVERFLOW_SHIFT); 
         // printf("iter: %d, gradient_dpu: %d, W_dpu_fp: %d\n", rep, gradient_dpu[m], W_dpu_fp[m]); 
         #endif 
     }

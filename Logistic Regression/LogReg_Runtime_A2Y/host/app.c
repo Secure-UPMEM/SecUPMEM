@@ -703,6 +703,9 @@ int main(int argc, char **argv) {
         else b1[j]=1;
         if(sumin[j]>0) b2[j]=0;
         else b2[j]=1;
+        if((~b1[j] & b2[j]) == 1) sigmoid[j]= product[j];
+        else if(b2[j] == 1) sigmoid[j]= 0;
+        else sigmoid[j]= 1;
         // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j])));
         // sigmoid[j] = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp((double) -(Y_total[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
     }
