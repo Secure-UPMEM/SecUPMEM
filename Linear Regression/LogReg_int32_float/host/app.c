@@ -35,8 +35,8 @@
 #endif
 
 //you need to find the best partitioning for each input to make sure that the CPU wil not be the bottleneck
-#define PART1 160
-#define PART2 160
+#define PART1 1
+#define PART2 1
 // Pointer declaration
 static T* X;
 static T* X_C;
@@ -197,10 +197,17 @@ static void GD_host_fp(T* X, T* Y, T* W, T** y_expected,T** gd_expected, uint32_
         
         // update weight
         for (uint32_t m = 0; m < n_size; ++m) {
-            W[m] = W[m] - (gradient_tmp[m] * lr) / (m_size>>OVERFLOW_SHIFT); 
             gd_expected[i][m] = gradient_tmp[m];
+            W[m] = W[m] - (gradient_tmp[m] * lr) / (m_size>>OVERFLOW_SHIFT); 
+            
         }
-
+        // if(i==1 || i == 0){
+        //         for(int i=0; i<10; i++){
+        //             for(int j=0; j<10; j++){
+        //                 printf("TEST:X:%d \n", X[i*n_size + j]);
+        //             }
+        //         }
+        // }
         free(gradient_tmp); 
     } // end iteration
 }
@@ -213,17 +220,17 @@ T* gradient_tmp = calloc(n_size, sizeof(T));
             for (unsigned int l = 0; l < n_size; ++l) {
                 // avoid overflow
                 // printf("3\n");
-
+                
                 gradient_tmp[l] -= X[j*n_size + l] * (Y[j]-(dot_product[j]>> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
             }
  // gradient done 
             
         }
 
-for (unsigned int l = 0; l < n_size; ++l) {
+    for (unsigned int l = 0; l < n_size; ++l) {
 
-            gd_expected[l] = gradient_tmp[l];
-}
+        gd_expected[l] = gradient_tmp[l];
+    }
    free(gradient_tmp);      
 }
 static void init_argument_tasklet(uint32_t tasklet_id, uint32_t nr_rows, uint32_t* rows_per_tasklet, uint32_t* start_row){
@@ -339,7 +346,8 @@ int main(int argc, char **argv) {
                 &input_args[i].start_row[id]); 
         }
     }
-
+    printf(" n_size_pad: %d, max_row: %d\n",n_size_pad, max_rows_per_dpu );
+    printf(" x size: %d\n",max_rows_per_dpu * nr_of_dpus * n_size_pad);
     // Input/output allocation
     X = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T));
     X_C = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T)); 
@@ -409,10 +417,8 @@ int main(int argc, char **argv) {
     AES_ECB_encrypt(&ctx, counter);
 	// #pragma omp parallel for
     for(uint32_t i=0;i<max_rows_per_dpu * nr_of_dpus * n_size_pad; i++){
-        X_C[i] = (T)counter[i];
+        X_C[i] = (uint32_t)counter[i];
 		X_D[i]= bufferX[i] - X_C[i];
-	}
-    for(uint32_t i=0;i<10; i++){
 	}
 
     // Transfer input arguments and training dataset to DPU
@@ -677,7 +683,14 @@ int main(int argc, char **argv) {
             total_gradient[x]= gradient_dpu[x] + gradient_cpu[x];
             
         }
-        GD_host_fp_test(X_D, bufferY, Y_total , gd_expected[rep], m_size, n_size);
+        // GD_host_fp_test(X_C, bufferY, Y_total , gd_expected[rep], m_size, n_size);
+        // if(rep==1 || rep == 0){
+        //     for(int i=0; i<10; i++){
+        //         for(int j=0; j<10; j++){
+        //             printf("REAL: X_d: %d, X_c: %d, EXPECTED:%d \n", X_D[i*n_size + j],X_C[i*n_size + j],bufferX[i*n_size + j]);
+        //         }
+        //     }
+        // }
         // if(rep==1 || rep == 0){
         //         for(int i=0; i<10; i++){
         //             printf("gd_d: %d, gd_c: %d, gd_t: %d, gd_expexted: %d, y_real:%d \n", gradient_dpu[i],gradient_cpu[i],total_gradient[i], gd_expected[rep][i], bufferY[i]);

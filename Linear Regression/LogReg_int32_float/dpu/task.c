@@ -41,6 +41,26 @@ int main() {
     if (tasklet_id == 0){ // Initialize once the cycle counter
         mem_reset(); // Reset the heap
     }
+    // if(mode == 1){
+    //     if (tasklet_id == 0) {
+    //         int count=0;
+    //         // T *arr;
+    //         // T *globArr;
+    //         // printf("check1 %d", NR_TASKLETS);
+    //         for (unsigned int each_tasklet = 0; each_tasklet < NR_TASKLETS; each_tasklet++){
+    //             // printf("hi \n");
+    //             for (unsigned int row = 0; row < DPU_INPUT_ARGUMENTS.rows_per_tasklet[each_tasklet]; row++){
+    //                 // printf("bye \n");
+    //             // arr[count] = dot_product_temp[each_tasklet][row];
+    //             dot_product_temp[each_tasklet][row] = total_prod[count];
+    //             // sigmoid_tmp[count] = dot_product_t[count];
+    //             // printf("%d  ",dot_product_temp[each_tasklet][row]);
+    //             count++;
+    //            }
+    //         }
+    //     }
+    //         // mram_write((const void *) dot_product_t, (__mram_ptr void *) DPU_PRODUCT,nr_rows );
+    // }
     
     barrier_wait(&my_barrier); // Barrier
 
@@ -121,8 +141,10 @@ int main() {
                 #else // int, fixed-pointed  
                 // gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * ((cache_Y[y_index] \
                 //     << SHIFT_AMOUNT) - dot_product_t) >> SHIFT_AMOUNT; 
+                // gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * (cache_Y[y_index] - \
+                //     (dot_product_temp[tasklet_id][row_index] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
                 gradient_tmp[tasklet_offset + l] -= cache_X[x_index + l] * (cache_Y[y_index] - \
-                    (total_prod[tasklet_id*(rows_per_tasklet) + row_index] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + SHIFT_AMOUNT); 
+                    (total_prod[(tasklet_id*rows_per_tasklet)+row_index] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
                 // printf( "offset2:%d \n", tasklet_id*(rows_per_tasklet) + row_index);
                 
                 #endif
@@ -170,7 +192,7 @@ int main() {
     if(mode==1){
     // Reduction 
     if (tasklet_id == 0) {
-        for (unsigned int each_tasklet = 0; each_tasklet < NR_TASKLETS; each_tasklet++){
+        for (unsigned int each_tasklet = 1; each_tasklet < NR_TASKLETS; each_tasklet++){
             for (unsigned int each_attribute = 0; each_attribute < n_size; each_attribute++) {
                 gradient_tmp[each_attribute] += gradient_tmp[each_tasklet*n_size_pad + each_attribute]; 
             }
