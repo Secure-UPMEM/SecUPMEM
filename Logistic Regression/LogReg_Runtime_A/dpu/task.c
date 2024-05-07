@@ -198,8 +198,8 @@ int main() {
                     gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[row_index*rows_per_tasklet+row_index]- cache_Y[y_index]); 
 
                     #else // int, fixed-pointed  
-                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[(row_index*rows_per_cache) + y_index] - \
-                        (cache_Y[y_index]<<SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + SHIFT_AMOUNT); 
+                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[(tasklet_id*rows_per_cache) + row_index] - \
+                        (cache_Y[y_index])<< SHIFT_AMOUNT) >> (OVERFLOW_SHIFT + SHIFT_AMOUNT); 
                     #endif
                 }
             # if PRINT

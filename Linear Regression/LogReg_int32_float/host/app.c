@@ -35,8 +35,8 @@
 #endif
 
 //you need to find the best partitioning for each input to make sure that the CPU wil not be the bottleneck
-#define PART1 1
-#define PART2 1
+#define PART1 80
+#define PART2 80
 // Pointer declaration
 static T* X;
 static T* X_C;
@@ -633,7 +633,9 @@ int main(int argc, char **argv) {
             for (uint32_t i = 0; i < m_size/ PART2 ; i++) { //  
                 int offset = s * (m_size / PART2) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
-                    counter2[(i * n_size) + k] = (uint8_t)((((offset * n_size) + k)*sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                    int local_off = i * n_size + k;
+                    // counter[i] = (uint8_t)(0+(i*sizeof(T)));
+                    counter2[local_off] = (uint8_t)(0+(((offset * n_size) + k) * sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
                 }
             }
 
