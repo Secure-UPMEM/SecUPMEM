@@ -32,8 +32,8 @@
 #include <dpu_probe.h>
 #endif
 
-#define PART 80
-#define PART2 160
+#define PART 160
+#define PART2 640
 
 // Pointer declaration
 static T* X;
@@ -295,6 +295,30 @@ static void GD_host_fp(T* X, T* Y, T* W, T** y_expected,T** gd_expected, uint32_
         #endif
         free(gradient_tmp); 
     } // end iteration
+}
+
+static void GD_host_fp1(T* X, T* Y, T* W, T* product,T* gd_expected, uint32_t m_size, uint32_t n_size) {
+    // printf("-----Start traing at host, fixed-point arithmetic-----\n");
+        // calculate gradient 
+        T* gradient_tmp = calloc(n_size, sizeof(T)); 
+
+        for (uint32_t j = 0; j < m_size; ++j) {
+            T sigmoid_temp = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp(
+                (double) -(product[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
+            // product[j] = sigmoid_temp;
+            for (unsigned int l = 0; l < n_size; ++l) {
+                // avoid overflow
+                gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - \
+                    (Y[j]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 
+            }
+        } // gradient done 
+        
+        // update weight
+        for (uint32_t m = 0; m < n_size; ++m) {
+            gd_expected[m] = gradient_tmp[m];
+        }
+        free(gradient_tmp); 
+    // end iteration
 }
 #endif 
 
@@ -599,10 +623,13 @@ int main(int argc, char **argv) {
         }
         AES_ECB_encrypt(&ctx, counter1);
         for(uint32_t i=0;i < (m_size)/PART; i++){ 
+
             int offset = ((m_size)/PART * s) + i;
             Y_host[(offset)]=0;
             // for(uint32_t i=0;i< (n_size)/PART; i++){ 
             for (unsigned int k = 0; k < n_size; k++) {
+
+                // printf( "c1: %d", counter1[i*n_size+k]);
                 Y_host[offset] += counter1[i*n_size+k] * W_dpu_fp[k]; 
             }
         }
@@ -637,9 +664,7 @@ int main(int argc, char **argv) {
     }
     #endif 
 
-    //changes for the secure computation
     //retrived data
-    // printf("Run done\n");
         
     start(&timer, 4, rep); // DPU-CPU time 
     DPU_FOREACH(dpu_set, dpu, i) {
@@ -649,11 +674,7 @@ int main(int argc, char **argv) {
     DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, "dot_product_t", 0, max_rows_per_dpu * sizeof(T), \
         DPU_XFER_DEFAULT));
     stop(&timer, 4); // DPU-CPU time 
-    
-    // printf("prod:\n");
-    // for( int j=0; j<max_rows_per_dpu * nr_of_dpus ; j++){
-    //     printf(" %d ",product[j]);
-    // }
+
 
     start(&timer, 7, rep);
     //merge
@@ -661,11 +682,11 @@ int main(int argc, char **argv) {
     for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus ; i++){
         Y_total[i] = product[i] + Y_host[i];
     }
-    if(rep==1 || rep==0){
-            for(int i=0; i<10; i++){
-                printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", product[i],Y_host[i],Y_total[i], y_expected[rep][i]);
-            }
-    }
+    // if(rep==1 || rep==0){
+    //         for(int i=0; i<10; i++){
+    //             printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", product[i],Y_host[i],Y_total[i], y_expected[rep][i]);
+    //         }
+    // }
 
     stop(&timer, 7);
 
@@ -678,42 +699,15 @@ int main(int argc, char **argv) {
         verif+= (Y_total[i]) * powers;
     }
     stop(&timer, 9);
-    // printf("dot\n");
-    // for(int j=0; j<max_rows_per_dpu; j++){
-    //     printf("%d  ", product[j]);
-    // }
-    // printf("\n");
-
-    //perform sigmoid
-    // newly comment added
-    int32_t* sumplus = calloc(max_rows_per_dpu * nr_of_dpus,sizeof(int32_t));
-    int32_t* sumin = calloc(max_rows_per_dpu * nr_of_dpus,sizeof(int32_t));
-    // printf("generation yao\n");
+    
     start(&timer, 10, rep);
     #pragma paralell for
-    for(int j=0; j < max_rows_per_dpu; j++){
-        // # ifdef FLOAT
-        // T sigmoid = sigmoid_dpu(dot_product_t); 
-        // # else 
-        // T sigmoid = sigmoid_dpu_fp((float) (dot_product_t>>SHIFT_AMOUNT) / (SHIFT_MASK+1)); 
-        // # endif
-        // sumplus[j]=0.5+product[j];
-        // sumin[j]=product[j]-0.5;
-        // if(sumplus[j]>0) b1[j]=0;
-        // else b1[j]=1;
-        // if(sumin[j]>0) b2[j]=0;
-        // else b2[j]=1;
-        // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j])));
-        sigmoid[j] = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp((double) -(Y_total[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
-    }
-    // printf("b1");
-    // for( int j=0; j<max_rows_per_dpu * nr_of_dpus ; j++){
-    //     printf(" %d ",b1[j]);
-    // }
-    // printf("\nb2");
-    // for( int j=0; j<max_rows_per_dpu * nr_of_dpus ; j++){
-    //     printf(" %d ",b2[j]);
-    // }
+    for(int j=0; j < max_rows_per_dpu *nr_of_dpus; j++){
+        
+         sigmoid[j] = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp(
+                (double) -(Y_total[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
+        // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j]))); // more accurate (fp)
+        }    
     stop(&timer, 10); 
         // end
     //send back results
@@ -728,23 +722,7 @@ int main(int argc, char **argv) {
     sizeof(uint32_t), DPU_XFER_DEFAULT));
     // printf("op mode sent\n");
     i = 0;
-    // operation_mode=1;
-    // printf("mode send\n");
-    // DPU_FOREACH(dpu_set, dpu, i) {
-    // // Copy input arguments to DPU
-    //     DPU_ASSERT(dpu_prepare_xfer(dpu, b1 + dpu_info[i].prev_rows_dpu));
-    // }
-    // DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b1", 0, \
-    // max_rows_per_dpu  * sizeof(uint8_t), DPU_XFER_DEFAULT));
-    // // printf("B1 send\n");
-    // i=0;
-    // DPU_FOREACH(dpu_set, dpu, i) {
-    // // Copy input arguments to DPU
-    //     DPU_ASSERT(dpu_prepare_xfer(dpu, b2 +  dpu_info[i].prev_rows_dpu));
-    // }
-    // DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b2", 0, \
-    // max_rows_per_dpu * sizeof(uint8_t), DPU_XFER_DEFAULT));
-
+    
     DPU_FOREACH(dpu_set, dpu, i) {
     // Copy input arguments to DPU
         DPU_ASSERT(dpu_prepare_xfer(dpu, sigmoid + dpu_info[i].prev_rows_dpu));
@@ -752,12 +730,6 @@ int main(int argc, char **argv) {
     DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "sigmoid_tmp", 0, \
     max_rows_per_dpu  * sizeof(T), DPU_XFER_DEFAULT));
 
-    // printf("B2 send\n");
-    // // printf("sigmoid\n");
-    // for(int j=0; j<max_rows_per_dpu; j++){
-    //     printf("%d  ", sigmoid[j]);
-    // }
-    // printf("\n");
     //run DPUs
     stop(&timer, 2); 
     // printf("sigmoid related sent\n");
@@ -775,12 +747,7 @@ int main(int argc, char **argv) {
     #if ENERGY
     DPU_ASSERT(dpu_probe_stop(&probe));
     #endif
-    // i = 0; 
-    // DPU_FOREACH(dpu_set, dpu, i) {
-    //             printf("DPU#%d:\n", i);
-    //             DPU_ASSERT(dpulog_read_for_dpu(dpu.dpu, stdout)); 
-    // }
-    // printf("run 2 end\n");
+    
     T* gradient_cpu = calloc(n_size, sizeof(T));
     AES_init_ctx(&ctx, key);
 
@@ -796,6 +763,7 @@ int main(int argc, char **argv) {
                 int local_offset = (offset * n_size) + k;
         // for(uint32_t i=0;i< (max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART; i++){ 
                 counter2[i*n_size+k] = (uint8_t)(local_offset * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                
             }
         }
 
@@ -804,21 +772,12 @@ int main(int argc, char **argv) {
         for (uint32_t i = 0; i < m_size/PART2; i++) {//  / PART
             int offset = s * (m_size / PART2) + i;
             for (unsigned int k = 0; k < n_size; k++) {
-                
-                gradient_cpu[k] -= counter2[(i * n_size) + k] * (sigmoid[offset] - (Y_total[offset] <<
-                        SHIFT_AMOUNT)) ; // y with offset
-            // gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - \
-            //             (Y[j]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 
-                
+                // printf( "c2: %d", counter2[i*n_size+k]);
+                gradient_cpu[k]+= counter2[(i * n_size) + k] * (sigmoid[offset] - \
+                    (Y[offset]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 
             }
         }
-        for (unsigned int k = 0; k < n_size; k++) {
-            
-            gradient_cpu[k] = gradient_cpu[k] >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
-        // gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - \
-        //             (Y[j]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 
-            
-        }
+    
     }
     stop(&timer, 8);
 
@@ -846,13 +805,20 @@ int main(int argc, char **argv) {
             #endif 
         }
         // printf("iter: %d, dpu: %d, gradient_dpu_tmp: %d\n", rep, i, gradient_dpu_tmp[i*n_size_pad]); 
-    } 
-    // start(&timer, 10, rep);
+    }
+
     for (uint32_t x = 0; x < n_size; ++x) {
         total_gradient[x]= gradient_dpu[x] + gradient_cpu[x];
         
     }
-    // stop(&timer,10);
+    // GD_host_fp1(bufferX, bufferY, W_dpu_fp, Y_total, gd_expected[rep],  m_size,  n_size);
+    // if(rep==1 || rep==0){
+    //         for(int i=0; i<10; i++){
+    //             printf("gd_d: %d, gd_c: %d, gd_t: %d, gd_expexted: %d\n", gradient_dpu[i],gradient_cpu[i],total_gradient[i], gd_expected[rep][i]);
+    //             // printf("sigmoid: %d\n", sigmoid[i]);
+    //         }
+    // }
+
     int s2=10;
     T verifi=0;
     start(&timer, 11, rep);

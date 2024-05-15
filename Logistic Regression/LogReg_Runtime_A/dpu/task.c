@@ -198,20 +198,9 @@ int main() {
                     gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[row_index*rows_per_tasklet+row_index]- cache_Y[y_index]); 
 
                     #else // int, fixed-pointed  
-                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[(tasklet_id*rows_per_cache) + row_index] - \
-                        (cache_Y[y_index])<< SHIFT_AMOUNT) >> (OVERFLOW_SHIFT + SHIFT_AMOUNT); 
+                    gradient_tmp[tasklet_offset + l] += cache_X[x_index + l] * (sigmoid_tmp[(tasklet_id*rows_per_tasklet) + row_index] - (cache_Y[y_index])<< SHIFT_AMOUNT) >> (OVERFLOW_SHIFT + SHIFT_AMOUNT); 
                     #endif
                 }
-            # if PRINT
-            if(row_index < 100) {
-                printf("dot_product dpu: %d, sigmoid_dpu: %d\n", dot_product_t, sigmoid); 
-                printf("X at DPU: "); 
-                for (uint32_t each_attribute = 0; each_attribute < n_size_pad; each_attribute++) {
-                    printf("%d, ", cache_X[x_index+each_attribute]); 
-                }
-                printf("\n");
-            }
-            # endif
             }
             x_index += n_size; 
         } // end cache_X 
