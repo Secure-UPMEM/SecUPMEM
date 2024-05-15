@@ -167,30 +167,15 @@ int main() {
             }
 
             // compute dot product
-            // printf("row per tasklet: %d  ", rows_per_tasklet);
-            // printf("total:%d  ",tasklet_id*rows_per_tasklet+row_index);
-            // printf("tasklet:%d  ",tasklet_id);
-            // printf("row:%d \n",row_index);
-            // printf("pre check %d",op_mode);
             if( op_mode == 0){
                 
                 dot_product_temp[tasklet_id][row_index] = dot_product(cache_X + x_index, cache_W, n_size); 
-                // sigmoid_tmp[tasklet_id][row_index]=dot_product_temp[tasklet_id][row_index];
             }
-            //newly comment added
-                // # ifdef FLOAT
-                // T sigmoid = sigmoid_dpu(dot_product_t); 
-                // # else 
-                // T sigmoid = sigmoid_dpu_fp((float) (dot_product_t>>SHIFT_AMOUNT) / (SHIFT_MASK+1)); 
-                // # endif
-
-            //end
 
             else if(op_mode == 1){
                 if((~b1[(row_index*rows_per_cache)+y_index] & b2[(row_index*rows_per_cache)+y_index]) == 1) sigmoid_tmp[tasklet_id][row_index]= dot_product_temp[tasklet_id][row_index];
                 else if(b2[(row_index*rows_per_cache)+y_index] == 1) sigmoid_tmp[tasklet_id][row_index]= 0;
                 else sigmoid_tmp[tasklet_id][row_index]= 1;
-                // printf("%d\n",  sigmoid_tmp[tasklet_id][row_index] );
                 // compute gradient 
                 // TODO: unroll the loop 
                     for (unsigned int l = 0; l < n_size; ++l) {
@@ -220,39 +205,16 @@ int main() {
     // Barrier
     barrier_wait(&my_barrier);
 
-    // Reduction 
-    // if (tasklet_id > 0) {
-    //     for (unsigned int each_attribute = 0; each_attribute < n_size; each_attribute++) {
-    //         gradient_tmp[each_attribute] += gradient_tmp[tasklet_id*n_size_pad + each_attribute]; 
-    //     }
-    // }
-    // barrier_wait(&my_barrier);
-    // if (tasklet_id == 0) {
-    //     // partial result of gradient in this DPU
-    //     mram_write((const void *) gradient_tmp, (__mram_ptr void *) DPU_RESULTS, n_size_pad_byte); 
-    // }
-    // printf("teask id %d",  tasklet_id);
-    // printf("op_mode id %d",  op_mode);
-
     if (tasklet_id == 0) {
         
         if(op_mode == 0){
             int count=0;
-            // T *arr;
-            // T *globArr;
-            // printf("check1 %d", NR_TASKLETS);
             for (unsigned int each_tasklet = 0; each_tasklet < NR_TASKLETS; each_tasklet++){
-                // printf("hi \n");
                 for (unsigned int row = 0; row < DPU_INPUT_ARGUMENTS.rows_per_tasklet[each_tasklet]; row++){
-                    // printf("bye \n");
-                // arr[count] = dot_product_temp[each_tasklet][row];
-                dot_product_t[count]= dot_product_temp[each_tasklet][row];
-                // sigmoid_tmp[count] = dot_product_t[count];
-                // printf("%d  ",dot_product_temp[each_tasklet][row]);
-                count++;
+                    dot_product_t[count]= dot_product_temp[each_tasklet][row];
+                    count++;
                }
             }
-            // mram_write((const void *) dot_product_t, (__mram_ptr void *) DPU_PRODUCT,nr_rows );
         }
         else if(op_mode == 1){
             for (unsigned int each_tasklet = 1; each_tasklet < NR_TASKLETS; each_tasklet++){

@@ -32,8 +32,8 @@
 #include <dpu_probe.h>
 #endif
 
-#define PART 80
-#define PART2 160
+#define PART 1
+#define PART2 1
 // Pointer declaration
 static T* X;
 static T* Y;
@@ -663,7 +663,7 @@ int main(int argc, char **argv) {
     }
     // if(rep==1 || rep==0){
     //         for(int i=0; i<10; i++){
-    //             // printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", product[i],Y_host[i],Y_total[i], y_expected[rep][i]);
+    //             printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", product[i],Y_host[i],Y_total[i], y_expected[rep][i]);
     //         }
     // }
 
@@ -678,11 +678,6 @@ int main(int argc, char **argv) {
         verif+= (Y_total[i]) * powers;
     }
     stop(&timer, 9);
-    // printf("dot\n");
-    // for(int j=0; j<max_rows_per_dpu; j++){
-    //     printf("%d  ", product[j]);
-    // }
-    // printf("\n");
 
     //perform sigmoid
     // newly comment added
@@ -692,11 +687,6 @@ int main(int argc, char **argv) {
     start(&timer, 10, rep);
     #pragma paralell for
     for(int j=0; j < max_rows_per_dpu; j++){
-        // # ifdef FLOAT
-        // T sigmoid = sigmoid_dpu(dot_product_t); 
-        // # else 
-        // T sigmoid = sigmoid_dpu_fp((float) (dot_product_t>>SHIFT_AMOUNT) / (SHIFT_MASK+1)); 
-        // # endif
         sumplus[j]=0.5+product[j];
         sumin[j]=product[j]-0.5;
         if(sumplus[j]>0) b1[j]=0;
@@ -706,8 +696,6 @@ int main(int argc, char **argv) {
         if((~b1[j] & b2[j]) == 1) sigmoid[j]= product[j];
         else if(b2[j] == 1) sigmoid[j]= 0;
         else sigmoid[j]= 1;
-        // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j])));
-        // sigmoid[j] = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp((double) -(Y_total[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
     }
     // printf("b1");
     // for( int j=0; j<max_rows_per_dpu * nr_of_dpus ; j++){
@@ -748,19 +736,7 @@ int main(int argc, char **argv) {
     DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b2", 0, \
     max_rows_per_dpu * sizeof(uint16_t), DPU_XFER_DEFAULT));
 
-    // DPU_FOREACH(dpu_set, dpu, i) {
-    // // Copy input arguments to DPU
-    //     DPU_ASSERT(dpu_prepare_xfer(dpu, sigmoid + dpu_info[i].prev_rows_dpu));
-    // }
-    // DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "sigmoid_tmp", 0, \
-    // max_rows_per_dpu  * sizeof(T), DPU_XFER_DEFAULT));
-
-    // printf("B2 send\n");
-    // // printf("sigmoid\n");
-    // for(int j=0; j<max_rows_per_dpu; j++){
-    //     printf("%d  ", sigmoid[j]);
-    // }
-    // printf("\n");
+    
     //run DPUs
     stop(&timer, 2); 
     // printf("sigmoid related sent\n");
@@ -778,12 +754,6 @@ int main(int argc, char **argv) {
     #if ENERGY
     DPU_ASSERT(dpu_probe_stop(&probe));
     #endif
-    // i = 0; 
-    // DPU_FOREACH(dpu_set, dpu, i) {
-    //             printf("DPU#%d:\n", i);
-    //             DPU_ASSERT(dpulog_read_for_dpu(dpu.dpu, stdout)); 
-    // }
-    // printf("run 2 end\n");
     T* gradient_cpu = calloc(n_size, sizeof(T));
     AES_init_ctx(&ctx, key);
 
@@ -808,7 +778,7 @@ int main(int argc, char **argv) {
             int offset = s * (m_size / PART2) + i;
             for (unsigned int k = 0; k < n_size; k++) {
                 
-                gradient_cpu[k] -= counter2[(i * n_size) + k] * (sigmoid[offset] - (Y_total[offset] <<
+                gradient_cpu[k] += counter2[(i * n_size) + k] * (sigmoid[offset] - (Y_total[offset] <<
                         SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
             // gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - \
             //             (Y[j]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 

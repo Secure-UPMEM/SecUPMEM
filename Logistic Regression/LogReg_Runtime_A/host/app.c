@@ -709,7 +709,7 @@ int main(int argc, char **argv) {
         // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j]))); // more accurate (fp)
         }    
     stop(&timer, 10); 
-        // end
+    // end
     //send back results
     start(&timer, 2, rep);
     i = 0;
