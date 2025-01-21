@@ -1,184 +1,182 @@
-#include <stdlib.h>
+/**
+* @file app.c
+* @brief Template for a Host Application Source File.
+*
+*/
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
+#include <getopt.h>
+#include <assert.h>
+#include <stdint.h>
 #include "../../support/timer.h"
-//#include "../../support/params.h"
-#include "../../support/aes.h"
-#include "gemv_utils.h"
-#define T uint32_t
-//int batch =600;
-/*typedef struct Params {
-    unsigned int  m;
-    unsigned int  n;
-}Params;
-struct Params input_params(int argc, char **argv) {
-    struct Params p;
-    p.m        = 4000;
-    p.n        = 4000;
+#include "../../support/common.h"
 
+T** A;
+T** B;
+T** C;
+int batch=64;
+// Create input arrays
+
+int max(int a, int b) {
+    return (a > b) ? a : b;
+}
+
+static void init_data(T** A, T** B, unsigned int m_size, unsigned int n_size){
+    for (unsigned int l = 0; l < NUM_LAYERS; l++)
+		for (unsigned int i = 0; i < m_size * n_size; i++){
+      {
+				A[l][i] = (unsigned int) (rand()%50);
+			}
+			// if(i % 100 < 98){
+			// 	A[l][i] = 0;
+			// }else{
+			// 	A[l][i] = i%50;// (l+i) % 2;
+			// }
+		}
+	for(int l = 0; l < batch; l++){
+	for (unsigned int i = 0; i < n_size; i++){
+		//if(i % 50 < 48){
+		//	B[i] = 0;
+		//}
+		//else{
+			B[l][i] = (unsigned int) (rand()%25);
+		//}
+	}}
+}
+
+// Compute output in the host
+static void mlp_host(T* C, T** A, T* B, unsigned int m_size, unsigned int n_size) {
+	for (unsigned int nl = 0; nl < NUM_LAYERS; nl++){
+		for (unsigned int m = 0; m < m_size; m++){
+			C[m] = 0;
+		}
+		#pragma omp parallel for
+		for (unsigned int m = 0; m < m_size; m++){
+			for (unsigned int n = 0; n < n_size; n++){
+				C[m] += A[nl][m * n_size + n] * B[n];
+			}
+			C[m] = max(0, C[m]);
+		}
+
+		for (unsigned int n = 0; n < n_size; n++){
+			B[n] = C[n];
+		}
+	}
+}
+
+// static uint64_t mlp_host_sum(uint64_t n_size, uint64_t m_size) {
+//   uint64_t sum = 0;
+//   for (uint64_t m = 0; m < n_size; m++){
+//     sum += B[m];
+//   }
+//   return sum;
+// }
+
+// Params ---------------------------------------------------------------------
+typedef struct Params {
+  char* dpu_type;
+  int   nr_of_ranks;
+  int   input_size_n;
+  int   input_size_m;
+  int   n_warmup;
+  int   n_reps;
+}Params;
+
+void usage() {
+  fprintf(stderr,
+    "\nUsage:  ./program [options]"
+    "\n"
+    "\nGeneral options:"
+    "\n    -h        help"
+    "\n    -d <D>    DPU type (default=fsim)"
+    "\n    -r <R>    # of ranks (default=2)"
+    "\n"
+    "\nBenchmark-specific options:"
+    "\n    -i <I>    input size (default=8M elements)"
+    "\n");
+  }
+
+  struct Params input_params(int argc, char **argv) {
+    struct Params p;
+    p.dpu_type      = "fsim";
+    p.nr_of_ranks   = 1;
+    p.input_size_n  = 1 << 9;
+    p.input_size_m  = 1 << 9;
+    p.n_warmup      = 2;
+    p.n_reps        = 3;
+    printf("start\n");
     int opt;
-    while((opt = getopt(argc, argv, "hm:n:w:e:")) >= 0) {
-        switch(opt) {
-            case 'h':
-                usage();
-                exit(0);
-                break;
-            case 'm': p.m        = atoi(optarg); break;
-            case 'n': p.n        = atoi(optarg); break;
-            default:
-                      fprintf(stderr, "\nUnrecognized option!\n");
-                      usage();
-                      exit(0);
-        }
+    while((opt = getopt(argc, argv, "hd:r:i:")) >= 0) {
+      switch(opt) {
+        case 'h':
+        usage();
+        exit(0);
+        break;
+        case 'd': p.dpu_type        = optarg; break;
+        case 'r': p.nr_of_ranks     = atoi(optarg); break;
+        case 'n': p.input_size_n    = atoi(optarg); break;
+        case 'm': p.input_size_m    = atoi(optarg); break;
+        default:
+        fprintf(stderr, "\nUnrecognized option!\n");
+        usage();
+        exit(0);
+      }
     }
-    //assert(NR_DPUS > 0 && "Invalid # of dpus!");
+    assert(p.nr_of_ranks > 0 && "Invalid # of ranks!");
 
     return p;
-}*/
+  }
 
-int main(int argc, char *argv[])
-{
-	//struct Params p = input_params(argc, argv);
-  const size_t m_size = 4000;//p.m;
-  const size_t n_size = 4000;//p.n;
-printf("start\n");
-  T **A, *b, *x;
-	int batch=600;
-  b = (T*)  malloc(sizeof(T)*m_size);
-  x = (T*) malloc(sizeof(T)*n_size);
-printf("ok\n");
-  allocate_dense(m_size, n_size, &A);
+  /**
+  * @brief Main of the Host Application.
+  */
+  int main(int argc, char **argv) {
+	//int batch=600;
+    struct Params p = input_params(argc, argv);
+    uint64_t n_size = 10000;
+    uint64_t m_size = 10000;
 
-  make_hilbert_mat(m_size,n_size, &A);
-	printf("allocation\n");
-#pragma omp parallel
-    {
-#pragma omp for
-    for (size_t i = 0; i < n_size; i++) {
-      x[i] = (T) i+1 ;
-    }
+    Timer timer;
+    A = malloc(NUM_LAYERS * sizeof(unsigned int*));
+    for(int l = 0; l < NUM_LAYERS; l++)
+        A[l] = malloc(n_size*m_size*sizeof(unsigned int));
+    //printf("1\n");
+    B = malloc(batch * sizeof(unsigned int*));
+    for(int l = 0; l < batch; l++)
+      B[l] = malloc(m_size*sizeof(unsigned int));
+  
+    C = malloc(batch * sizeof(unsigned int*));
+    for(int l = 0; l < batch; l++)
+	    C[l] = malloc(m_size*sizeof(unsigned int));
 
-#pragma omp for
-    for (size_t i = 0; i < m_size; i++) {
-      b[i] = (T) 0.0;
-    }
-    }	
-	/*********************************SecNDP ***************************************/
-	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
-	struct AES_ctx ctx;
-	float sec=0;
-	uint8_t s1[]={ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
-	uint8_t* first = (T*) malloc(sizeof(T)*m_size*n_size);
-    	T* ciphertext = (T*) malloc(sizeof(T)*m_size*n_size);
-    	uint32_t* temp = (T*) malloc(sizeof(T)*m_size*n_size);
-    	//T* C_host = (T*) malloc(sizeof(T)*m_size);
-    	printf("start\n");
-    	//startTimer(&timer1);
-    	int count=0;
-    	for(int i=0;i< m_size; i++){
-    		for(int j=0;j< n_size; j++){
+    // Create an input file with arbitrary data.
+    init_data(A, B, m_size, n_size);
 
-		 first[count] = (uint8_t)(&A[i][j]);
-		 count++;
-		 }
-        //printf("%d  \n", ciphertext[i]);
-    	}
-    	AES_init_ctx(&ctx, key);
-    	AES_ECB_encrypt(&ctx, first);
-	//for(int b=0; b< batch; b++){
-    	for(int i=0;i< m_size*n_size; i++){
-
-        	ciphertext[i] = (uint32_t)first[i];
-		temp[i]= (A[i%m_size][i%n_size]) - ciphertext[i];	
-		//printf("a: %d , temp: %d, cipher: %d\n", A[i], temp[i], ciphertext[i]);
-     	}
-     	count =0;
-     	
-     	for(int i=0;i< m_size; i++){
-    		for(int j=0;j< n_size; j++){
-
-		 A[i][j] = temp[count];
-		 count++;
-		 }
-        //printf("%d  \n", ciphertext[i]);
-    	}
-     	//}
-	printf("sec done\n");
-     	//stopTimer(&timer1);
-    	//sec += getElapsedTime(timer1);
-	/*********************************SecNDP****************************************/
-	
-	
-  Timer timer;
-  start(&timer, 0, 0);
-	count =0;
-	for(int i=0;i< m_size; i++){
-    		for(int j=0;j< n_size; j++){
-
-		 first[count] = (uint8_t)(&A[i][j]);
-		 count++;
-		 }
-        //printf("%d  \n", ciphertext[i]);
-    	}
-    	AES_init_ctx(&ctx, key);
-    	AES_ECB_encrypt(&ctx, first);
-    	count =0;
-	for(int s=0; s< batch; s++){
-    	for(int i=0;i< m_size; i++){
-    		for(int j=0;j< n_size; j++){
-
-		 A[i][j] = A[i][j] + first[count];
-		 count++;
-		 }
-        //printf("%d  \n", ciphertext[i]);
-    	}}
+    start(&timer, 0, 1);
+  
+	for(int ba=0;ba<batch;ba++){
+    mlp_host(C[ba], A, B[ba], n_size, m_size);
+	}
     stop(&timer, 0);
-
-
-    printf("Decryption ");
-    print(&timer, 0, 1);
-    printf("\n");
-    
-    start(&timer, 0, 0);
-    for(int s=0;s<batch;s++){
-   gemv(A, x, m_size, n_size, &b);
-   }
-   stop(&timer, 0);
-
-
+    // uint32_t sum = mlp_host_sum(n_size, m_size);
+   
     printf("Kernel ");
     print(&timer, 0, 1);
     printf("\n");
 
-#if 0
-  print_vec(x, rows);
-  print_mat(A, rows, cols);
-  print_vec(b, rows);
-#endif
+    // printf("SUM = %d \n", sum);
 
-  //printf("sum(x) = %f, sum(Ax) = %f\n", sum_vec(x,cols), sum_vec(b,rows));
-  return 0;
-}
-
-void gemv(T** A, T* x, size_t rows, size_t cols, T** b) {
-#pragma omp parallel for
-  for (size_t i = 0; i < rows; i ++ )
-  for (size_t j = 0; j < cols; j ++ ) {
-    (*b)[i] = (*b)[i] + A[i][j]*x[j];
-  }
-}
-
-void make_hilbert_mat(size_t rows, size_t cols, T*** A) {
-#pragma omp parallel for
-  for (size_t i = 0; i < rows; i++) {
-    for (size_t j = 0; j < cols; j++) {
-      (*A)[i][j] = 1.0/( (T) i + (T) j + 1.0);
-    }
-  }
-}
-
-T sum_vec(T* vec, size_t rows) {
-  T sum = 0.0;
-#pragma omp parallel for reduction(+:sum)
-  for (int i = 0; i < rows; i++) sum = sum + vec[i];
-  return sum;
+    for(int l = 0; l < NUM_LAYERS; l++)
+        free(A[l]);
+    free(A);
+    for(int l = 0; l < batch; l++)
+        free(B[l]);
+    free(B);
+    for(int l = 0; l < batch; l++)
+        free(C[l]);
+    free(C);
+    return 0;
 }

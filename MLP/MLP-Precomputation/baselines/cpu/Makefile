@@ -1,5 +1,5 @@
 all:
-		gcc -o gemv -fopenmp gemv_openmp.c 
+		gcc -o gemv -lm -fopenmp gemv_openmp.c 
 
 clean:
 		rm gemv
