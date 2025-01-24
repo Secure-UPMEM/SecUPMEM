@@ -40,7 +40,6 @@ int main() {
 	
 	if (tasklet_id == 0){ // Initialize once the cycle counter
 		mem_reset(); // Reset the heap
-	//printf("T:%d", sizeof(T));
 	}
 	// Barrier
 	
@@ -123,7 +122,6 @@ int main() {
 		// for(unsigned int pos = 0; pos < element_per_cacheC && i + pos < nr_rows; pos++){ 
 		for(unsigned int pos = 0; pos < element_per_cacheC; pos++){ 
 			if(i + pos >= nr_rows){
-				// printf("id: %d, nrows: %d, error\n", tasklet_id, nrows);
 				break;
 			} 
 

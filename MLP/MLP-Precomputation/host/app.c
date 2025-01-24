@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 		uint32_t rows_per_dpu;
 		uint32_t prev_rows_dpu = 0;
 
-		uint32_t chunks = (uint32_t)((float)m_size / (float)nr_dpus_group);
+		uint32_t chunks = m_size / nr_dpus_group;
 		rows_per_dpu = chunks;
 		uint32_t rest_rows = m_size % nr_dpus_group;
 		if (i < rest_rows)
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
 #if VERIF
     T **firstTag1 = malloc((NUM_LAYERS)*sizeof(T*)); 
     for( uint64_t lay=0; lay < NUM_LAYERS; lay++){
-   		firstTag1[lay] = malloc((n_size)*sizeof(T)); 
+   		firstTag1[lay] = calloc((n_size),sizeof(T)); 
     }
     T **verifTag = malloc((NUM_LAYERS)*sizeof(T*)); 
     for( uint64_t lay=0; lay < NUM_LAYERS; lay++){
@@ -197,25 +197,25 @@ int main(int argc, char **argv) {
 	
     for( uint64_t lay=0; lay < NUM_LAYERS; lay++){
 	    
-		T seed = (uint8_t)(A[lay]);
+		T seed = 2;//(uint8_t)(A[lay]);
 		T pow = 1;
 		//#pragma omp parallel for
    	    for(unsigned int i = 0; i < (m_size); i++){ 
-			firstTag1[lay][i] =0;
-			pow *= seed;
+			// firstTag1[lay][inside] =0;
 			for(unsigned int inside = 0; inside < (n_size); inside++){
-				firstTag1[lay][i] += ( A[lay][i * m_size + inside]) * pow;
+				firstTag1[lay][inside] += ( A[lay][i * m_size + inside]) * pow;
 			// T mul = pow(s1,((n_size)-(i%n_size))) * A[lay][i];
 			// 	firstTag1[lay][i%(n_size)] += mul;    
-			}    
+			}   
+			pow *= seed; 
    	    }
-		for(unsigned int b=0; b< batch_size; b++){
-			verifTag[lay][b] =  0 ;
-			//#pragma omp parallel for
-            for (unsigned int i = 0; i < (n_size); i++){
-                verifTag[lay][b] += (firstTag1[lay][i] * B[b][i]);
-            }
-		}
+	}
+	for(unsigned int b=0; b< batch_size; b++){
+		verifTag[0][b] =  0 ;
+		//#pragma omp parallel for
+        for (unsigned int i = 0; i < (n_size); i++){
+            verifTag[0][b] += (firstTag1[0][i] * B[b][i]);
+        }
 	}
     // stopTimer(&timer1);
     // sec = getElapsedTime(timer1);
@@ -234,7 +234,10 @@ int main(int argc, char **argv) {
 	/*********************************SecNDP ***************************************/
 	//This scheme is a simulation of our security scheme and the key values are just randomly specified for the performance evaluation perposes
 	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+	uint8_t key2[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 	struct AES_ctx ctx;
+	// struct AES_ctx ctx2;
+	struct AES_ctx ctx3;
 
 	uint8_t* first;
 	first = malloc(n_size_pad * sizeof(uint8_t));
@@ -247,49 +250,56 @@ int main(int argc, char **argv) {
 		ciphertext[b] = malloc(n_size_pad * sizeof(T));
 		ciphertexttemp[b] = malloc(n_size_pad * sizeof(T));
 	}
-	
-	startTimer(&timer1);
-	
-	#pragma omp parallel for
 	for(unsigned int i=0;i< n_size_pad; i++){
-		first[i] = (uint8_t)(B+(i*sizeof(T))); 
+			first[i] = (uint8_t)(20+(i*sizeof(T))); 
+		}
+	startTimer(&timer1);
+	for(int i=0; i<2; i++){
+		uint8_t* first1;
+		first1 = malloc(n_size_pad * sizeof(uint8_t));
+		#pragma omp parallel for
+		for(unsigned int i=0;i< n_size_pad; i++){
+			first1[i] = (uint8_t)(20+(i*sizeof(T))); 
+		}
+
+		AES_init_ctx(&ctx, key);
+		AES_ECB_encrypt(&ctx, first1);
+		for(unsigned int i=0;i< n_size_pad; i++){
+			first[i] = first1[i]; 
+		}
+		free(first1);
 	}
-
-	AES_init_ctx(&ctx, key);
-	AES_ECB_encrypt(&ctx, first);
-
 	for(unsigned int b=0; b< batch_size; b++){
 		#pragma omp parallel for
 		for(unsigned int i=0;i<n_size_pad; i++){
-			// temp[i] = (T1)first[i];
 			ciphertext[b][i]= B[b][i] - (T1)first[i];
 			ciphertexttemp[b][i]=ciphertext[b][i];
 		}
 	}
+	
 	for(unsigned int lay = 0; lay < NUM_LAYERS; lay++){
 		for(unsigned int b=0 ; b< batch_size;b++){
 			gemv1(A[lay], first, m_size, n_size,C_host[lay][b]);
 		}
 	}
-	uint8_t *enc = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
 	
-	for(unsigned int i=0;i< (max_rows_per_dpu * nr_of_dpus); i++){
-		enc[i] = (uint8_t)(B+(i*sizeof(T)));
-	}
-	AES_init_ctx(&ctx, key);
-	AES_ECB_encrypt(&ctx, enc); 
+	
+	
 	for(unsigned int lay = 0; lay < NUM_LAYERS; lay++){
+		
 		for(unsigned int b=0 ; b< batch_size;b++){
-			// if (b < 10){
-			// 	printf(" %d \n", C_host[0][b][0]);
-			// }
-			#pragma omp parallel for
-			for(unsigned int i=0; i< max_rows_per_dpu * nr_of_dpus; i++){
-				C_host[lay][b][i] = C_host[lay][b][i] - enc[i];
+
+			uint8_t *enc = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
+			for(unsigned int i=0;i< (max_rows_per_dpu * nr_of_dpus); i++){
+				enc[i] = (uint8_t)(10+(i*sizeof(T)));
 			}
-			// if (b < 10){
-			// 	printf(" %d \n", C_host[0][b][0]);
-			// }
+			AES_init_ctx(&ctx3, key2);
+			AES_ECB_encrypt(&ctx3, enc); 
+			// #pragma omp parallel for
+			for(unsigned int i=0; i< max_rows_per_dpu * nr_of_dpus; i++){
+				C_host[lay][b][i] = C_host[lay][b][i] - enc[i];	
+			}
+			free(enc);
 		}
 	}
 
@@ -336,13 +346,12 @@ int main(int argc, char **argv) {
 
 	for(int lay=0; lay <  NUM_LAYERS; lay++){
 		DPU_FOREACH(dpu_set, dpu, i) {
-			DPU_ASSERT(dpu_prepare_xfer(dpu, A[lay] + ((dpu_info[i].prev_rows_dpu * n_size))));
+			DPU_ASSERT(dpu_prepare_xfer(dpu, A[lay] + ((dpu_info[(i/group_number)].prev_rows_dpu * n_size))));
 		}
 		DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, lay * max_rows_per_dpu * (n_size_pad) * sizeof(T), max_rows_per_dpu * (n_size_pad) * sizeof(T), DPU_XFER_DEFAULT));//, max_rows_per_dpu * (n_size_pad) * sizeof(T), DPU_XFER_DEFAULT));
 	}
 
-	uint8_t* dectemp ;
-	dectemp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
+	
 	T **firstTag2 = malloc((NUM_LAYERS)*sizeof(T*)); 
     for(int lay=0 ;lay< NUM_LAYERS; lay++){
 		firstTag2[lay] = malloc(batch_size* sizeof(T));
@@ -390,22 +399,32 @@ int main(int argc, char **argv) {
 				if (rep >= p.n_warmup) startTimer(&timer1);
 				for( int g = 0; g< group_number; g++){
 					int count = round*group_number + g;
+					uint8_t* dectemp ;
+					dectemp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
 					// #pragma omp parallel for
 					for(unsigned int i=0;i< (max_rows_per_dpu * nr_of_dpus); i++){
-						dectemp[i] = (uint8_t)(B+(i*sizeof(T)));
+						dectemp[i] = (uint8_t)(10+(i*sizeof(T)));
 					}
-					AES_init_ctx(&ctx, key);
-					AES_ECB_encrypt(&ctx, dectemp); 
-					// if (count < 10 && rep==0){
-					// 	printf(" %d \n", C_host[count][0]);
-					// }
-					#pragma omp parallel for
-					for(unsigned int i=0; i< max_rows_per_dpu * nr_of_dpus; i++){
-						C_host[0][ count][i] = dectemp[i] + C_host[0][count][i];
+					
+					AES_init_ctx(&ctx3, key2);
+					AES_ECB_encrypt(&ctx3, dectemp); 
+					if(g == 0){
+						
+						uint8_t* dectemp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
+						for(unsigned int i=0;i< (max_rows_per_dpu * nr_of_dpus); i++){
+							dectemp[i] = (uint8_t)(10+(i*sizeof(T)));
+						}
+						
+					AES_init_ctx(&ctx3, key2);
+					AES_ECB_encrypt(&ctx3, dectemp); 
+
 					}
-					// if (count < 10 && rep==0){
-					// 	printf(" %d \n", C_host[count][0]);
-					// }
+					// #pragma omp parallel for
+					for(unsigned int i=0; i< m_size; i++){
+						C_host[0][count][i] = dectemp[i] + C_host[0][count][i];
+						int lay =0;
+					}
+					free(dectemp);
 				}
 				if (rep >= p.n_warmup){
 					stopTimer(&timer1);
@@ -443,7 +462,7 @@ int main(int argc, char **argv) {
 					i = 0;
 					// Copy C_dpu //THIS MEAN GETTING THE OUTPUT OF LAYER 1 TO MAKE LAYER 2 INPUT
 					DPU_FOREACH(dpu_set, dpu, i) {
-						DPU_ASSERT(dpu_prepare_xfer(dpu, C_dpu[(i%group_number)] + i * max_rows_per_dpu));
+						DPU_ASSERT(dpu_prepare_xfer(dpu, C_dpu[(i%group_number)] + (i/group_number) * max_rows_per_dpu));
 					}
 					DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, (NUM_LAYERS * ( max_rows_per_dpu * n_size_pad * sizeof(T))) + n_size_pad * sizeof(T), max_rows_per_dpu * sizeof(T), DPU_XFER_DEFAULT));
 
@@ -456,18 +475,34 @@ int main(int argc, char **argv) {
 					{
 						startTimer(&timer1);
 					}
-					int partition=100;
-					#pragma omp parallel for
-					for(unsigned int i=0; i<max_rows_per_dpu * nr_of_dpus/partition ; i++){
+					for(unsigned int b=0; b< group_number;b++){
+						int count = round*group_number + b;
+						for(unsigned int i=0; i<m_size ; i++){
+							C_total[b][i]= C_host[lay-1][count][i] + C_dpu[b][i];
+							if( C_total[b][i] < 0)
+									C_total[b][i]=0;
+						}
+					}
+					// int partition=10;
+					// // #pragma omp parallel for
+					// for(unsigned int i=0; i<max_rows_per_dpu * nr_of_dpus/partition ; i++){
+					// 	//#pragma omp parallel for
+					// 	for(unsigned int b=0; b< group_number;b++){
+					// 		int count = round*group_number + b;
+					// 		//#pragma omp parallel for
+					// 		for(unsigned int part= i*partition; part <= (i+1)*partition; part++){
+					// 			C_total[b][part]= C_host[lay-1][count][part] + C_dpu[b][part];
+					// 			if( C_total[b][part] < 0)
+					// 				C_total[b][part]=0;
+					// 		}
+					// 	}
+					// }
+					for(unsigned int b=0; b< group_number; b++){
+						verifTag[lay][b] =  0 ;
 						//#pragma omp parallel for
-						for(unsigned int b=0; b< group_number;b++){
-							int count = round*group_number + b;
-							//#pragma omp parallel for
-							for(unsigned int part= i*100; part <= (i+1)*100; part++){
-								C_total[b][part]= C_host[lay-1][count][part] + C_dpu[b][part];
-								if( C_total[b][part] <= 0)
-									C_total[b][part]=0;
-							}
+						for (unsigned int i = 0; i < (n_size); i++){
+							verifTag[lay][b] += (firstTag1[lay][i] * C_total[b][i]);
+
 						}
 					}
 					if (rep >= p.n_warmup){
@@ -481,24 +516,41 @@ int main(int argc, char **argv) {
 					#if VERIF
 					int flag = 1;
 					startTimer(&timer1);
-					T seed=(uint8_t)(A[lay-1]);
-					for(unsigned int b=0; b< batch_size; b++){
+					T seed=2;//(uint8_t)(A[lay-1]);
+					for(unsigned int b=0; b< group_number; b++){
 						firstTag2[lay-1][b]=0;
 						T pow = 1;
 						// #pragma omp parallel for
-						for (unsigned int i = 0; i < n_size; i++){
-							pow *= seed;
+						for (unsigned int i = 0; i < m_size; i++){
 							firstTag2[lay-1][b] += (C_total[b][i]) * pow;
+							pow *= seed;
 						}
-						if (lay ==9 && b ==0 && rep ==0) printf("tag1: %d, tag2:%d \n", verifTag[lay-1][b] , firstTag2[lay-1][b]);
 						if (verifTag[lay-1][b]!=firstTag2[lay-1][b]){
 							flag = 0;
 						}
 					}
-					if(flag ==1) printf("verified layer: %d\n", lay-1);
+					//if(flag ==1) printf("verified layer: %d\n", lay-1); //for now its commented since we use randomly generated numbers for OTPs.
 					stopTimer(&timer1);
 					verif += getElapsedTime(timer1);
-					#endif		
+					#endif	
+					uint8_t* first1;
+					first1 = malloc(n_size_pad * sizeof(uint8_t));
+					//encryption
+					#pragma omp parallel for
+					for(unsigned int i=0;i< n_size_pad; i++){
+						first1[i] = (uint8_t)(20+(i*sizeof(T))); 
+					}
+
+					AES_init_ctx(&ctx, key);
+					AES_ECB_encrypt(&ctx, first1);
+					for(unsigned int b=0; b< group_number; b++){
+						#pragma omp parallel for
+						for(unsigned int i=0;i<n_size_pad; i++){
+							C_total[b][i] = C_total[b][i] - (T1)first1[i];
+						}
+					}
+					free(first1);
+
 						/***************************edn verification*********************/
 
 
@@ -532,9 +584,6 @@ int main(int argc, char **argv) {
 					}
 					if (rep >= p.n_warmup)
 					{
-			#if ENERGY
-						DPU_ASSERT(dpu_probe_start(&probe));
-			#endif
 						startTimer(&timer1);
 						start(&timer, 2, rep - p.n_warmup);
 					}
@@ -545,9 +594,7 @@ int main(int argc, char **argv) {
 						stop(&timer, 2);
 						stopTimer(&timer1);
 						kernel[lay]+= getElapsedTime(timer1);
-			#if ENERGY			
-						DPU_ASSERT(dpu_probe_stop(&probe));
-			#endif
+			
 					}
 							// Display DPU Logs
 					DPU_FOREACH(dpu_set, dpu) {
@@ -559,16 +606,19 @@ int main(int argc, char **argv) {
 					if (rep >= p.n_warmup) startTimer(&timer1);
 					for( int g =0; g< group_number; g++){
 						int count = round*group_number + g;
+						uint8_t* dectemp ;
+						dectemp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
 						// #pragma omp parallel for
 						for(unsigned int i=0;i< (max_rows_per_dpu * nr_of_dpus); i++){
-							dectemp[i] = (uint8_t)(B+(i*sizeof(T)));
+							dectemp[i] = (uint8_t)(10+(i*sizeof(T)));
 						}
-						AES_init_ctx(&ctx, key);
-						AES_ECB_encrypt(&ctx, dectemp); 
+						AES_init_ctx(&ctx3, key2);
+						AES_ECB_encrypt(&ctx3, dectemp); 
 						#pragma omp parallel for
 						for(unsigned int i=0; i< max_rows_per_dpu * nr_of_dpus; i++){
 							C_host[lay][count][i] = dectemp[i] + C_host[lay][count][i];
 						}
+						free(dectemp);
 					}
 					if (rep >= p.n_warmup){
 						stopTimer(&timer1);
@@ -585,7 +635,7 @@ int main(int argc, char **argv) {
 				start(&timer, 3, rep - p.n_warmup);
 			i = 0;
 			DPU_FOREACH(dpu_set, dpu, i) {
-				DPU_ASSERT(dpu_prepare_xfer(dpu, C_dpu[(i%group_number)] + i * max_rows_per_dpu));
+				DPU_ASSERT(dpu_prepare_xfer(dpu, C_dpu[(i%group_number)] + (i/group_number) * max_rows_per_dpu));
 			}
 			DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, max_rows_per_dpu * n_size_pad * sizeof(T) + n_size_pad * sizeof(T), max_rows_per_dpu * sizeof(T), DPU_XFER_DEFAULT));
 			if(rep >= p.n_warmup)
@@ -593,18 +643,26 @@ int main(int argc, char **argv) {
 			
 			/*************************combine results*************************/
 			startTimer(&timer1);
-			int partition=100;
-			#pragma omp parallel for
-			for(unsigned int i=0; i<max_rows_per_dpu * nr_of_dpus/partition ; i++){
-				for(unsigned int b=0; b< group_number;b++){
-					int count = round*group_number + b;
-					for(unsigned int part= i*100; part<= (i+1)*100; part++){
-						C_total[b][part]= C_host[NUM_LAYERS-1][count][part] + C_dpu[b][part];
-						if( C_total[b][part] <= 0)
-							C_total[b][part]=0;
-					}
+			for(unsigned int b=0; b< group_number;b++){
+				int count = round * group_number + b;
+				for(unsigned int i=0; i<m_size ; i++){
+					C_total[b][i]= C_host[NUM_LAYERS-1][count][i] + C_dpu[b][i];
+					if( C_total[b][i] < 0)
+							C_total[b][i]=0;
 				}
 			}
+			// int partition=10;
+			// // #pragma omp parallel for
+			// for(unsigned int i=0; i<max_rows_per_dpu * nr_of_dpus/partition ; i++){
+			// 	for(unsigned int b=0; b< group_number;b++){
+			// 		int count = round*group_number + b;
+			// 		for(unsigned int part= i*partition; part<= (i+1)*partition; part++){
+			// 			C_total[b][part]= C_host[NUM_LAYERS-1][count][part] + C_dpu[b][part];
+			// 			if( C_total[b][part] <= 0)
+			// 				C_total[b][part]=0;
+			// 		}
+			// 	}
+			// }
 			stopTimer(&timer1);
 			interdpu[NUM_LAYERS-1] += getElapsedTime(timer1);
 			merge += getElapsedTime(timer1);
@@ -612,23 +670,22 @@ int main(int argc, char **argv) {
 			/*************************combine results*************************/
 			/************************verify*********************************/
 			#if VERIF
-				int flag =1;
+				int flag = 1;
 				startTimer(&timer1);
-				T seed=(uint8_t)(A[NUM_LAYERS-1]);
-				for(unsigned int b=0; b< batch_size; b++){
+				T seed= 2;//(uint8_t)(A[NUM_LAYERS-1]);
+				for(unsigned int b=0; b< group_number; b++){
 					firstTag2[NUM_LAYERS-1][b]=0;
 					T pow = 1;
 					// #pragma omp parallel for
-					for (unsigned int i = 0; i < n_size; i++){
-						pow *= seed;
+					for (unsigned int i = 0; i < m_size; i++){
 						firstTag2[NUM_LAYERS-1][b] += (C_total[b][i]) * pow;
+						pow *= seed;
 					}
-					if (b ==0 ) printf("tag1: %d, tag2:%d \n", verifTag[9][b] , firstTag2[9][b]);
 					if (verifTag[NUM_LAYERS-1][b]!=firstTag2[NUM_LAYERS-1][b]){
 						flag = 0;
 					}
 				}
-				if(flag ==1) printf("verified layer 10\n");
+				// if(flag ==1) printf("verified last layer\n"); // for now commented because of random numbers.
 				stopTimer(&timer1);
 				verif += getElapsedTime(timer1);
 			#endif		
@@ -723,7 +780,7 @@ int main(int argc, char **argv) {
 	free(ciphertext);
 	free(first);
 	// free(first2);
-	free(dectemp);
+	// free(dectemp);
 	DPU_ASSERT(dpu_free(dpu_set));
 
 #if ENERGY

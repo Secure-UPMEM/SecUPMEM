@@ -610,15 +610,14 @@ int main(int argc, char **argv) {
     AES_init_ctx(&ctx, key);
     start(&timer, 6, rep);
 
-    uint8_t* counter1 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
 
     for(uint32_t s=0; s < (PART); s++){ 
+        uint8_t* counter1 = malloc(((m_size * n_size)/PART) * sizeof(uint8_t));
         for(uint32_t i=0; i < (m_size/PART); i++){ 
             int offset = ((m_size)/PART * s) + i;
             for (unsigned int k = 0; k < n_size; k++) {
-                int local_offset = (offset * n_size) + k;
         // for(uint32_t i=0;i< (max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART; i++){ 
-                counter1[i*n_size+k] = (uint8_t)(local_offset * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                counter1[i*n_size+k] = (uint8_t)(offset * n_size) + k * sizeof(T);//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
             }
         }
         AES_ECB_encrypt(&ctx, counter1);
@@ -628,11 +627,10 @@ int main(int argc, char **argv) {
             Y_host[(offset)]=0;
             // for(uint32_t i=0;i< (n_size)/PART; i++){ 
             for (unsigned int k = 0; k < n_size; k++) {
-
-                // printf( "c1: %d", counter1[i*n_size+k]);
                 Y_host[offset] += counter1[i*n_size+k] * W_dpu_fp[k]; 
             }
         }
+        free(counter1);
     }
     stop(&timer, 6);
 
@@ -678,7 +676,7 @@ int main(int argc, char **argv) {
 
     start(&timer, 7, rep);
     //merge
-            
+    #pragma omp parallel for      
     for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus ; i++){
         Y_total[i] = product[i] + Y_host[i];
     }
@@ -701,7 +699,7 @@ int main(int argc, char **argv) {
     stop(&timer, 9);
     
     start(&timer, 10, rep);
-    #pragma paralell for
+    #pragma omp paralell for
     for(int j=0; j < max_rows_per_dpu *nr_of_dpus; j++){
         
          sigmoid[j] = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp(
