@@ -1,4 +1,4 @@
-NR_DPUS=2048  NR_TASKLETS=16 make -B
+NR_DPUS=2050  NR_TASKLETS=16 make -B
 ./bin/gemv_host -m 1000 -n 1000 -e 10 -b 64
 ./bin/gemv_host -m 5000 -n 5000 -e 10 -b 64
 ./bin/gemv_host -m 10000 -n 10000 -e 10 -b 64

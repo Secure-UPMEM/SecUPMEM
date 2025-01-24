@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 	uint64_t inputsize = n_size * nr_of_dpus * sizeof(T);
 	uint64_t outputsize = m_size * nr_of_dpus * sizeof(T);
 	uint64_t matrixsize = n_size * m_size * NUM_LAYERS * sizeof(T);
-	uint64_t mram_size=56000000;
+	uint64_t mram_size=65000000;
 	uint64_t totalmramsize = mram_size * NR_DPUS;
 	group_number= (uint64_t)((totalmramsize) / (inputsize+outputsize+matrixsize));
 	if (group_number >= batch_size) group_number = batch_size; 
@@ -422,7 +422,6 @@ int main(int argc, char **argv) {
 					// #pragma omp parallel for
 					for(unsigned int i=0; i< m_size; i++){
 						C_host[0][count][i] = dectemp[i] + C_host[0][count][i];
-						int lay =0;
 					}
 					free(dectemp);
 				}
@@ -606,15 +605,14 @@ int main(int argc, char **argv) {
 					if (rep >= p.n_warmup) startTimer(&timer1);
 					for( int g =0; g< group_number; g++){
 						int count = round*group_number + g;
-						uint8_t* dectemp ;
-						dectemp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
+						uint8_t* dectemp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
 						// #pragma omp parallel for
 						for(unsigned int i=0;i< (max_rows_per_dpu * nr_of_dpus); i++){
 							dectemp[i] = (uint8_t)(10+(i*sizeof(T)));
 						}
 						AES_init_ctx(&ctx3, key2);
 						AES_ECB_encrypt(&ctx3, dectemp); 
-						#pragma omp parallel for
+						// #pragma omp parallel for
 						for(unsigned int i=0; i< max_rows_per_dpu * nr_of_dpus; i++){
 							C_host[lay][count][i] = dectemp[i] + C_host[lay][count][i];
 						}
