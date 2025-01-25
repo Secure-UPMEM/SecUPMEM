@@ -35,7 +35,7 @@ struct dpu_info_t *dpu_info;
 #ifndef ENERGY
 #define ENERGY 0
 #endif
-#define PRINT 1
+#define PRINT 0
 #define VERIF 1
 #define INTG 0
 

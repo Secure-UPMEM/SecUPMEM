@@ -15,20 +15,15 @@
 #define roundup(n, m) ((n / m) * m + m)
 
 __host dpu_arguments_t DPU_INPUT_ARGUMENTS;
-__host int32_t CURRENT_LAYER;
+__host uint32_t CURRENT_LAYER;
 uint32_t s = 0x2b;
 // GEMV
-static uint32_t gemv(T *bufferC, T *bufferA, T *bufferB, int pos) {
-	uint32_t result=0;
+static void gemv(T *bufferC, T *bufferA, T *bufferB, int pos) {
 	for (unsigned int i = 0; i < BLOCK_SIZE / sizeof(T); i++) {	
 		bufferC[pos] += bufferA[i] * bufferB[i];
-		#if INTG
-		result += (bufferA[i] * s);
-		#endif
 			
 	}
-	//printf("result:%d\n", result);
-	return result;
+	return;
 }
 
 
@@ -45,7 +40,6 @@ int main() {
 	
 	if (tasklet_id == 0){ // Initialize once the cycle counter
 		mem_reset(); // Reset the heap
-	//printf("T:%d", sizeof(T));
 	}
 	// Barrier
 	
@@ -103,17 +97,16 @@ int main() {
 	int offset = 0;
 
 	#if PRINT
-	//printf("id: %d, rows_per_tasklet = %d\n",tasklet_id, rows_per_tasklet);
-	//printf("id: %d, start_row = %d\n",tasklet_id, start_row);
+	printf("id: %d, rows_per_tasklet = %d\n",tasklet_id, rows_per_tasklet);
+	printf("id: %d, start_row = %d\n",tasklet_id, start_row);
+	printf("current layer: %d\n", CURRENT_LAYER);
 	#endif
 
 	// Iterate over nr_rows
 	// for (unsigned int i = start_row; i < start_row + rows_per_tasklet; i += 2) {
-	int k=0;
-	uint32_t result=0;
 	for (unsigned int i = start_row; i < start_row + rows_per_tasklet; i += element_per_cacheC) {
 
-		mram_temp_addr_A = (uint32_t) (DPU_MRAM_HEAP_POINTER + i * n_size * sizeof(T) + (CURRENT_LAYER*max_rows * n_size_pad * sizeof(T)) );
+		mram_temp_addr_A = (uint32_t) (DPU_MRAM_HEAP_POINTER + i * n_size * sizeof(T) + (CURRENT_LAYER * max_rows * n_size_pad * sizeof(T)) );
 		mram_temp_addr_B = mram_base_addr_B;
 
 		// cache_C[0] = 0;
@@ -129,7 +122,6 @@ int main() {
 		// for(unsigned int pos = 0; pos < element_per_cacheC && i + pos < nr_rows; pos++){ 
 		for(unsigned int pos = 0; pos < element_per_cacheC; pos++){ 
 			if(i + pos >= nr_rows){
-				// printf("id: %d, nrows: %d, error\n", tasklet_id, nrows);
 				break;
 			} 
 
@@ -154,9 +146,7 @@ int main() {
 				}
 
 				// Compute GEMV
-				result += gemv(cache_C, cache_A, cache_B, pos);
-				//printf("result:%d\n", result);
-				//printf("gemv");
+				gemv(cache_C, cache_A, cache_B, pos);
 				
 				// Update memory addresses
 				mram_temp_addr_A += BLOCK_SIZE;
@@ -181,32 +171,15 @@ int main() {
 
 
 			mram_read((__mram_ptr void const*) (mram_temp_addr_B), cache_B, BLOCK_SIZE);
-			//uint32_t result=0;
-			//printf("n %u, n: %u \n", n_size, n);
+
 			for (j = 0; j < (int) (n_size - n); j++) {
 				// Compute GEMV.
-				
-				//printf("result:%u , a: %u\n",result,cache_A[j]);
-				//printf("result:%u , a: %u\n",result,cache_A[j]);
+
 				if(j >= (int)(BLOCK_SIZE / sizeof(T))){ 
 					printf("error\n");
 					break;
 				}
 				cache_C[pos] += cache_A[j] * cache_B[j];
-				//printf("cache a :
-				//printf("tasklet:%d, pos:%d, result:%u , a: %u, B:%u\n",me(),pos,result,cache_A[j],cache_B[j]);
-				#if INTG
-				if(j == n_size-n-1) {
-					//k++;
-					if(cache_A[j] != result){
-						//printf("Data Not Verified\n");
-						//printf("tasklet:%d, pos:%d, result:%u , a: %u\n",me(),pos,result,cache_A[j]);		
-					}
-				result=0;
-				}
-				else 
-					result += (cache_A[j] * s);
-				#endif
 			}
 
 			
@@ -225,7 +198,6 @@ int main() {
 		// Write cache to current MRAM block
 		
 		mram_write(cache_C, (__mram_ptr void *) (mram_base_addr_C), 8);
-
 		// Update memory address
 		// mram_base_addr_C += 2 * sizeof(T);
 		mram_base_addr_C += 8; 

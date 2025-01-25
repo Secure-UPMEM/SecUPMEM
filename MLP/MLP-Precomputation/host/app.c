@@ -250,14 +250,15 @@ int main(int argc, char **argv) {
 		ciphertext[b] = malloc(n_size_pad * sizeof(T));
 		ciphertexttemp[b] = malloc(n_size_pad * sizeof(T));
 	}
+	// #pragma omp parallel for
 	for(unsigned int i=0;i< n_size_pad; i++){
-			first[i] = (uint8_t)(20+(i*sizeof(T))); 
-		}
+		first[i] = (uint8_t)(20+(i*sizeof(T))); 
+	}
 	startTimer(&timer1);
 	for(int i=0; i<2; i++){
 		uint8_t* first1;
 		first1 = malloc(n_size_pad * sizeof(uint8_t));
-		#pragma omp parallel for
+		// #pragma omp parallel for
 		for(unsigned int i=0;i< n_size_pad; i++){
 			first1[i] = (uint8_t)(20+(i*sizeof(T))); 
 		}
@@ -383,6 +384,7 @@ int main(int argc, char **argv) {
 				DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "CURRENT_LAYER", 0, sizeof(uint32_t), DPU_XFER_DEFAULT));
 				//sending ciphertext to cpu
 				//we need to send a group of batch to the UPMEM for parallel computation
+				i = 0;
 				DPU_FOREACH(dpu_set, dpu, i) {
 					DPU_ASSERT(dpu_prepare_xfer(dpu, ciphertext[(i%group_number)]));// ciphertext here is part of the B which is the vector
 				}
