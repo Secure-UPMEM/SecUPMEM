@@ -698,14 +698,13 @@ int main(int argc, char **argv) {
     }
     stop(&timer, 9);
     
+    int tem= (1<<SHIFT_AMOUNT);
     start(&timer, 10, rep);
     #pragma omp paralell for
     for(int j=0; j < max_rows_per_dpu *nr_of_dpus; j++){
-        
-         sigmoid[j] = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp(
-                (double) -(Y_total[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
-        // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j]))); // more accurate (fp)
-        }    
+         sigmoid[j] = (int32_t) round(tem/(1.0 + exp((double)((-Y_total)[j]>>SHIFT_AMOUNT)/tem))); 
+        // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j])));
+    }    
     stop(&timer, 10); 
     // end
     //send back results
