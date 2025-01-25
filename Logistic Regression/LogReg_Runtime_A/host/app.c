@@ -698,12 +698,38 @@ int main(int argc, char **argv) {
     }
     stop(&timer, 9);
     
-    int tem= (1<<SHIFT_AMOUNT);
+    
     start(&timer, 10, rep);
     #pragma omp paralell for
     for(int j=0; j < max_rows_per_dpu *nr_of_dpus; j++){
-         sigmoid[j] = (int32_t) round(tem/(1.0 + exp((double)((-Y_total)[j]>>SHIFT_AMOUNT)/tem))); 
-        // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j])));
+        int tem= (1<<SHIFT_AMOUNT);
+        
+
+        if(Y_total[j] >= 15)
+            sigmoid[j] = 1; 
+        else if (Y_total[j] <= -15) 
+            sigmoid[j] = 0; 
+        else if (Y_total[j] == 0.0)
+            sigmoid[j] = 0.5; 
+        else
+             sigmoid[j] = (int32_t) round(tem/(1.0 + exp((double)-(Y_total[j]>>SHIFT_AMOUNT)/tem))); 
+            // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j])));
+            // if(Y_total[j] >= 15)
+            //     sigmoid[j] = 1; 
+            // else if (Y_total[j] <= -15) 
+            //     sigmoid[j] = 0; 
+            // else if (Y_total[j] == 0.0)
+            //     sigmoid[j] = 0.5; 
+
+        // float sum = 1.0;
+        // float temp = 1.0; 
+        // // iter 100 times 
+        // for(uint32_t i = 1; i < 101; ++i){
+        //     temp = temp * (-Y_total[j]) / i;
+        //     sum = sum + temp; 
+        // }
+        // // printf("exp: %f\n", sum);
+        // sigmoid[j] =  (1.0 / (1.0 + sum)); 
     }    
     stop(&timer, 10); 
     // end
