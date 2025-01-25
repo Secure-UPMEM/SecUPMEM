@@ -7,13 +7,23 @@ Note: This implementation is intended solely for performance experiments.
 **Code references:**
 Below are the links to our (both CPU-based and UPMEM-based) baselines. Our code is built upon these implementations, and we compare our implementation with them:
 
-MLP: https://github.com/CMU-SAFARI/prim-benchmarks
+MLP: 
 
-DLRM: https://github.com/UBC-ECE-Sasha/PIM-Embedding-Lookup
+https://github.com/CMU-SAFARI/prim-benchmarks
 
-Logistic Regression and Linear Regression: https://github.com/CMU-SAFARI/pim-ml
+DLRM: 
 
-AES Implementation: https://github.com/kokke/tiny-AES-c/blob/master/aes.c
+https://github.com/UBC-ECE-Sasha/PIM-Embedding-Lookup
+
+https://github.com/upmem/PIM-Embedding-Lookup/tree/multicol/upmem
+
+Logistic Regression and Linear Regression: 
+
+https://github.com/CMU-SAFARI/pim-ml
+
+AES Implementation: 
+
+https://github.com/kokke/tiny-AES-c/blob/master/aes.c
 
 
 To run our implementation, navigate to the specific folder and execute:
