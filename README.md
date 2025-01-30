@@ -1,5 +1,8 @@
 # SecUPMEM
 
+[![DOI](https://zenodo.org/badge/921982568.svg)](https://doi.org/10.5281/zenodo.14736863)
+
+
 Enabling Low-Cost Secure Computing on Untrusted In-Memory Architectures
 
 Note: This implementation is intended solely for performance experiments.
