@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <assert.h>
-
+#include <omp.h>
 #include <math.h>
 
 #include "../support/common.h"
@@ -32,8 +32,8 @@
 #include <dpu_probe.h>
 #endif
 
-#define PART 1
-#define PART2 1
+#define PART 160
+#define PART2 640
 // Pointer declaration
 static T* X;
 static T* Y;
@@ -435,6 +435,7 @@ int main(int argc, char **argv) {
     T* Y_host = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
     T* Y_dpu = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
     T* Y_total = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
+    T* Y_temp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
 
 
     T* product = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
@@ -494,9 +495,9 @@ int main(int argc, char **argv) {
     stop(&timer, 0); 
 
     #ifdef FLOAT 
-    compute_error_rate(bufferX, bufferY, W_predef, m_size, n_size, "host_ideal"); 
-    #else 
-    compute_error_rate(X_float, Y_float, W_predef, m_size, n_size, "host_ideal"); 
+    // compute_error_rate(bufferX, bufferY, W_predef, m_size, n_size, "host_ideal"); 
+    // #else 
+    // compute_error_rate(X_float, Y_float, W_predef, m_size, n_size, "host_ideal"); 
     #endif 
     
     //Generation ciphertext
@@ -554,30 +555,31 @@ int main(int argc, char **argv) {
     // Iteration at DPU
     printf("Run program on DPU(s)...\n"); 
     for(uint32_t rep = 0; rep < iter_time; ++rep) {
+        start(&timer, 2, rep); // CPU-DPU transfer time start
         i = 0;
         operation_mode=0;
-    DPU_FOREACH(dpu_set, dpu, i) {
-        // Copy input arguments to DPU
-        DPU_ASSERT(dpu_prepare_xfer(dpu, &operation_mode));
-    }
-    DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "op_mode", 0, \
-        sizeof(uint32_t), DPU_XFER_DEFAULT));
+        DPU_FOREACH(dpu_set, dpu, i) {
+            // Copy input arguments to DPU
+            DPU_ASSERT(dpu_prepare_xfer(dpu, &operation_mode));
+        }
+        DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "op_mode", 0, \
+            sizeof(uint32_t), DPU_XFER_DEFAULT));
 
-    // printf("mode  sent\n");
-    // Copy W 
-    start(&timer, 2, rep); // CPU-DPU transfer time start
-    i = 0; 
-    DPU_FOREACH(dpu_set, dpu, i) {
-        #ifdef FLOAT
-        DPU_ASSERT(dpu_prepare_xfer(dpu, W_dpu)); 
-        #else
-        DPU_ASSERT(dpu_prepare_xfer(dpu, W_dpu_fp)); 
-        #endif 
-    }
-    DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, \
-        max_rows_per_dpu * n_size_pad * sizeof(T) + max_rows_per_dpu * sizeof(T), \
-        n_size_pad * sizeof(T), DPU_XFER_DEFAULT)); 
-    stop(&timer, 2); // CPU-DPU transfer time stop 
+        // printf("mode  sent\n");
+        // Copy W 
+        
+        i = 0; 
+        DPU_FOREACH(dpu_set, dpu, i) {
+            #ifdef FLOAT
+            DPU_ASSERT(dpu_prepare_xfer(dpu, W_dpu)); 
+            #else
+            DPU_ASSERT(dpu_prepare_xfer(dpu, W_dpu_fp)); 
+            #endif 
+        }
+        DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, \
+            max_rows_per_dpu * n_size_pad * sizeof(T) + max_rows_per_dpu * sizeof(T), \
+            n_size_pad * sizeof(T), DPU_XFER_DEFAULT)); 
+        stop(&timer, 2); // CPU-DPU transfer time stop 
     // printf("weight\n");
     
     //cpu kernel computation
@@ -585,28 +587,34 @@ int main(int argc, char **argv) {
     AES_init_ctx(&ctx, key);
     start(&timer, 6, rep);
 
-    uint8_t* counter1 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
-
     for(uint32_t s=0; s < (PART); s++){ 
+        // uint8_t* counter1 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
+        uint8_t* counter1 = (uint8_t*) aligned_alloc(64, ((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
+
+        // #pragma omp parallel for
         for(uint32_t i=0; i < (m_size/PART); i++){ 
             int offset = ((m_size)/PART * s) + i;
+            // #pragma omp parallel for
             for (unsigned int k = 0; k < n_size; k++) {
                 int local_offset = (offset * n_size) + k;
-        // for(uint32_t i=0;i< (max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART; i++){ 
-                counter1[i*n_size+k] = (uint8_t)(local_offset * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                counter1[i*n_size+k] = (uint8_t)(local_offset * sizeof(T));
             }
         }
         AES_ECB_encrypt(&ctx, counter1);
+        // #pragma omp parallel for
         for(uint32_t i=0;i < (m_size)/PART; i++){ 
             int offset = ((m_size)/PART * s) + i;
-            Y_host[(offset)]=0;
-            // for(uint32_t i=0;i< (n_size)/PART; i++){ 
+            int temp = 0; 
+            #pragma omp simd reduction(+:temp)
             for (unsigned int k = 0; k < n_size; k++) {
-                Y_host[offset] += counter1[i*n_size+k] * W_dpu_fp[k]; 
+                temp += counter1[i*n_size+k] * W_dpu_fp[k];
             }
+            Y_host[(offset)]=temp;
         }
+        free(counter1);
     }
-    // }
+
+
     stop(&timer, 6);
 
     // Run DPU kernel
@@ -696,15 +704,10 @@ int main(int argc, char **argv) {
         if((~b1[j] & b2[j]) == 1) sigmoid[j]= product[j];
         else if(b2[j] == 1) sigmoid[j]= 0;
         else sigmoid[j]= 1;
+
+        Y_temp[j] = Y_total[j] << SHIFT_AMOUNT;
     }
-    // printf("b1");
-    // for( int j=0; j<max_rows_per_dpu * nr_of_dpus ; j++){
-    //     printf(" %d ",b1[j]);
-    // }
-    // printf("\nb2");
-    // for( int j=0; j<max_rows_per_dpu * nr_of_dpus ; j++){
-    //     printf(" %d ",b2[j]);
-    // }
+
     stop(&timer, 10); 
         // end
     //send back results
@@ -726,7 +729,7 @@ int main(int argc, char **argv) {
         DPU_ASSERT(dpu_prepare_xfer(dpu, b1 + dpu_info[i].prev_rows_dpu));
     }
     DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b1", 0, \
-    max_rows_per_dpu  * sizeof(uint16_t), DPU_XFER_DEFAULT));
+    max_rows_per_dpu  * sizeof(uint8_t), DPU_XFER_DEFAULT));
     // printf("B1 send\n");
     i=0;
     DPU_FOREACH(dpu_set, dpu, i) {
@@ -734,12 +737,9 @@ int main(int argc, char **argv) {
         DPU_ASSERT(dpu_prepare_xfer(dpu, b2 +  dpu_info[i].prev_rows_dpu));
     }
     DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "b2", 0, \
-    max_rows_per_dpu * sizeof(uint16_t), DPU_XFER_DEFAULT));
+    max_rows_per_dpu * sizeof(uint8_t), DPU_XFER_DEFAULT));
 
-    
-    //run DPUs
     stop(&timer, 2); 
-    // printf("sigmoid related sent\n");
 
     // Run DPU kernel
     start(&timer, 3, rep); 
@@ -760,14 +760,13 @@ int main(int argc, char **argv) {
     uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART2 * sizeof(uint8_t));
 
     start(&timer, 8, rep);
-
+    
     //  #pragma omp parallel for shared(Y, Y_total, gradient_cpu) private(counter2)
     for (int s = 0; s < PART2; s++) {
         for(uint32_t i=0; i < (m_size/PART2); i++){ 
             int offset = ((m_size)/PART2 * s) + i;
             for (unsigned int k = 0; k < n_size; k++) {
                 int local_offset = (offset * n_size) + k;
-        // for(uint32_t i=0;i< (max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART; i++){ 
                 counter2[i*n_size+k] = (uint8_t)(local_offset * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
             }
         }
@@ -777,17 +776,14 @@ int main(int argc, char **argv) {
         for (uint32_t i = 0; i < m_size/PART2; i++) {//  / PART
             int offset = s * (m_size / PART2) + i;
             for (unsigned int k = 0; k < n_size; k++) {
-                
-                gradient_cpu[k] += counter2[(i * n_size) + k] * (sigmoid[offset] - (Y_total[offset] <<
-                        SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
-            // gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - \
-            //             (Y[j]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 
-                
+                gradient_cpu[k] += counter2[(i * n_size) + k] * (sigmoid[offset] - (Y_temp[offset])) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset  
             }
         }
+       
     }
-
+    
     stop(&timer, 8);
+    free(counter2);
 
     // Retrive result
     start(&timer, 4, rep); 
@@ -879,29 +875,35 @@ int main(int argc, char **argv) {
     // Print timing results
     printf("CPU ");
     print(&timer, 0, 1);
-    printf("init C-D ");
-    print(&timer, 1, 1);
-    printf("syn C-D ");
-    print(&timer, 2, 1); 
-    printf("DPU kernel ");
-    print(&timer, 3, 1);
-    printf("D-C ");
-    print(&timer, 4, 1);
-    printf("CPU Part 1 ");
-    print(&timer, 6, 1);
-    printf("merge 1 ");
-    print(&timer, 7, 1);
-    printf("verif 1 ");
-    print(&timer, 9, 1);
-    printf("CPU sigmoid ");
-    print(&timer, 10, 1);
-    printf("CPU Part 2 ");
-    print(&timer, 8, 1);
-    printf("CPU reduction (merge 2) ");
-    print(&timer, 5, 1);
-    printf("verif 2 ");
-    print(&timer, 11, 1);
-    
+    printf("\n"); 
+
+    // printf("init C-D ");
+    // print(&timer, 1, 1);
+    // printf("syn C-D ");
+    // print(&timer, 2, 1); 
+    // printf("DPU kernel ");
+    // print(&timer, 3, 1);
+    // printf("D-C ");
+    // print(&timer, 4, 1);
+    // printf("CPU Part 1 ");
+    // print(&timer, 6, 1);
+    // printf("merge 1 ");
+    // print(&timer, 7, 1);
+    // printf("verif 1 ");
+    // print(&timer, 9, 1);
+    // printf("CPU sigmoid ");
+    // print(&timer, 10, 1);
+    // printf("CPU Part 2 ");
+    // print(&timer, 8, 1);
+    // printf("CPU reduction (merge 2) ");
+    // print(&timer, 5, 1);
+    // printf("verif 2 ");
+    // print(&timer, 11, 1);
+
+    float cpuside = (timer.time[6]+timer.time[10]+timer.time[8]) / (1000);
+    float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
+    float execution_time = fmax(cpuside,dpuside) + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
+    printf("Execution time: %f ms", execution_time );
 
 // #if ENERGY
 //     double energy;

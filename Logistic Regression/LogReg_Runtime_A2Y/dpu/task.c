@@ -14,8 +14,8 @@
 #include "../support/common.h"
 
 __host dpu_arguments_t DPU_INPUT_ARGUMENTS;  
-__host uint16_t b1[NR_TASKLETS*MAX_ROWS];
-__host uint16_t b2[NR_TASKLETS*MAX_ROWS];
+__host uint8_t b1[NR_TASKLETS*MAX_ROWS];
+__host uint8_t b2[NR_TASKLETS*MAX_ROWS];
 //new added
 __host uint32_t op_mode;
 __host T dot_product_t[NR_TASKLETS*MAX_ROWS];
