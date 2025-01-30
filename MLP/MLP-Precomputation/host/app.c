@@ -254,6 +254,7 @@ int main(int argc, char **argv) {
 	for(unsigned int i=0;i< n_size_pad; i++){
 		first[i] = (uint8_t)(20+(i*sizeof(T))); 
 	}
+
 	startTimer(&timer1);
 	for(int i=0; i<2; i++){
 		uint8_t* first1;
@@ -271,7 +272,7 @@ int main(int argc, char **argv) {
 		free(first1);
 	}
 	for(unsigned int b=0; b< batch_size; b++){
-		#pragma omp parallel for
+		// #pragma omp parallel for
 		for(unsigned int i=0;i<n_size_pad; i++){
 			ciphertext[b][i]= B[b][i] - (T1)first[i];
 			ciphertexttemp[b][i]=ciphertext[b][i];
@@ -329,7 +330,7 @@ int main(int argc, char **argv) {
 
 	//timers
 	float cpu[NUM_LAYERS]={0};
-	float temp_gen[NUM_LAYERS]={0};
+	// float temp_gen[NUM_LAYERS]={0};
 	float cpudpu[NUM_LAYERS]={0};
 	float interdpu[NUM_LAYERS]={0};
 	float kernel[NUM_LAYERS]={0};
@@ -398,8 +399,12 @@ int main(int argc, char **argv) {
 				//end of CPU-DPU communication
 
 				/********************************CPU computation in parallel to UPMEM ***********************************/
-				if (rep >= p.n_warmup) startTimer(&timer1);
-				for( int g = 0; g< group_number; g++){
+				if (rep >= p.n_warmup){
+					startTimer(&timer1);
+					start(&timer, 9, rep - p.n_warmup);
+					
+				} 
+				for( unsigned int g = 0; g< group_number; g++){
 					int count = round*group_number + g;
 					uint8_t* dectemp ;
 					dectemp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
@@ -428,6 +433,7 @@ int main(int argc, char **argv) {
 					free(dectemp);
 				}
 				if (rep >= p.n_warmup){
+					stop(&timer, 9);
 					stopTimer(&timer1);
 					cpu[0] += getElapsedTime(timer1);
 				}
@@ -449,6 +455,7 @@ int main(int argc, char **argv) {
 
 				}
 				// Display DPU Logs
+
 				DPU_FOREACH(dpu_set, dpu) {
 					DPU_ASSERT(dpulog_read_for_dpu(dpu.dpu, stdout));
 				}
@@ -456,6 +463,7 @@ int main(int argc, char **argv) {
 				//timer 4 is for inter DPU-CPU Communication
 				for(int lay = 1; lay < NUM_LAYERS; lay++){
 					if (rep >= p.n_warmup){
+						start(&timer, 3, rep - p.n_warmup);
 						start(&timer, 4, rep - p.n_warmup);
 						startTimer(&timer1);		
 					}
@@ -468,6 +476,7 @@ int main(int argc, char **argv) {
 					DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, (NUM_LAYERS * ( max_rows_per_dpu * n_size_pad * sizeof(T))) + n_size_pad * sizeof(T), max_rows_per_dpu * sizeof(T), DPU_XFER_DEFAULT));
 
 					if (rep >= p.n_warmup){
+						stop(&timer, 3);
 						stopTimer(&timer1);
 						dpucpu[lay-1] += getElapsedTime(timer1);
 					}
@@ -475,6 +484,7 @@ int main(int argc, char **argv) {
 					if (rep >= p.n_warmup)
 					{
 						startTimer(&timer1);
+						start(&timer, 8, rep - p.n_warmup);
 					}
 					for(unsigned int b=0; b< group_number;b++){
 						int count = round*group_number + b;
@@ -507,6 +517,7 @@ int main(int argc, char **argv) {
 						}
 					}
 					if (rep >= p.n_warmup){
+
 						stopTimer(&timer1);
 						interdpu[lay-1] += getElapsedTime(timer1);
 					}
@@ -537,7 +548,7 @@ int main(int argc, char **argv) {
 					uint8_t* first1;
 					first1 = malloc(n_size_pad * sizeof(uint8_t));
 					//encryption
-					#pragma omp parallel for
+					// #pragma omp parallel for
 					for(unsigned int i=0;i< n_size_pad; i++){
 						first1[i] = (uint8_t)(20+(i*sizeof(T))); 
 					}
@@ -545,7 +556,7 @@ int main(int argc, char **argv) {
 					AES_init_ctx(&ctx, key);
 					AES_ECB_encrypt(&ctx, first1);
 					for(unsigned int b=0; b< group_number; b++){
-						#pragma omp parallel for
+						// #pragma omp parallel for
 						for(unsigned int i=0;i<n_size_pad; i++){
 							C_total[b][i] = C_total[b][i] - (T1)first1[i];
 						}
@@ -559,6 +570,8 @@ int main(int argc, char **argv) {
 					
 					if (rep >= p.n_warmup)
 					{
+						stop(&timer, 8);
+						stop(&timer, 4);
 						startTimer(&timer1);
 						start(&timer, 1, rep - p.n_warmup);
 					}
@@ -580,8 +593,8 @@ int main(int argc, char **argv) {
 					if (rep >= p.n_warmup){
 						stopTimer(&timer1);
 						cpudpu[lay] += getElapsedTime(timer1);
+						
 						stop(&timer, 1);
-						stop(&timer, 4);
 					}
 					if (rep >= p.n_warmup)
 					{
@@ -604,8 +617,11 @@ int main(int argc, char **argv) {
 					/**********************cpu part***************************/
 					
 					/********************************add cpu portion ***********************************/
-					if (rep >= p.n_warmup) startTimer(&timer1);
-					for( int g =0; g< group_number; g++){
+					if (rep >= p.n_warmup){
+						startTimer(&timer1);
+						start(&timer, 9, rep - p.n_warmup);
+					} 
+					for( unsigned int g =0; g< group_number; g++){
 						int count = round*group_number + g;
 						uint8_t* dectemp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(uint8_t));
 						// #pragma omp parallel for
@@ -621,6 +637,7 @@ int main(int argc, char **argv) {
 						free(dectemp);
 					}
 					if (rep >= p.n_warmup){
+						stop(&timer, 9);
 						stopTimer(&timer1);
 						cpu[lay] += getElapsedTime(timer1);
 					}
@@ -643,8 +660,12 @@ int main(int argc, char **argv) {
 			
 			/*************************combine results*************************/
 			startTimer(&timer1);
+			if (rep >= p.n_warmup)
+				start(&timer, 8, rep - p.n_warmup);
+			
 			for(unsigned int b=0; b< group_number;b++){
 				int count = round * group_number + b;
+				// #pragma omp parallel for
 				for(unsigned int i=0; i<m_size ; i++){
 					C_total[b][i]= C_host[NUM_LAYERS-1][count][i] + C_dpu[b][i];
 					if( C_total[b][i] < 0)
@@ -689,6 +710,9 @@ int main(int argc, char **argv) {
 				stopTimer(&timer1);
 				verif += getElapsedTime(timer1);
 			#endif		
+
+			if (rep >= p.n_warmup)
+				stop(&timer, 8);
 				/***************************edn verification*********************/
 			for(unsigned int b=0; b< group_number; b++){
 				for(unsigned int i=0;i<  n_size_pad; i++){        	
@@ -709,35 +733,43 @@ int main(int argc, char **argv) {
 
 	// Print timing results
 
-	printf("\nCPU Version Time (ms): ");
+	printf("\nCPU Version Time (ms): \n");
 	print(&timer, 0, 1);
 
-	printf("\n\nCPU-DPU Time (ms):");
-	print(&timer, 1, p.n_reps);
-	for(int i=0; i< NUM_LAYERS ; i++){
-		printf("\n lay[%d] = %f:",i, (cpudpu[i]/p.n_reps)*1e3);
-	}
-	printf("\nDPU Kernel Time (ms):");
-	print(&timer, 2, p.n_reps);
-	for(int i=0; i< NUM_LAYERS ; i++){
-                printf("\n lay[%d] = %f:",i, (kernel[i]/p.n_reps)*1e3);
-        }
+	// printf("\n\nCPU-DPU Time (ms):");
+	// print(&timer, 1, p.n_reps);
+	// for(unsigned int i=0; i< NUM_LAYERS ; i++){
+	// 	printf("\n lay[%d] = %f:",i, (cpudpu[i]/p.n_reps)*1e3);
+	// }
+	// printf("\nDPU Kernel Time (ms):");
+	// print(&timer, 2, p.n_reps);
+	// for(unsigned int i=0; i< NUM_LAYERS ; i++){
+    //             printf("\n lay[%d] = %f:",i, (kernel[i]/p.n_reps)*1e3);
+    //     }
 
-	printf("\nDPU-CPU Time (ms): ");
-	print(&timer, 3, p.n_reps);
-	for(int i=0; i< NUM_LAYERS ; i++){
-                printf("\n lay[%d] = %f:",i, (dpucpu[i]/p.n_reps)*1e3);
-        }
+	// printf("\nDPU-CPU Time (ms): ");
+	// print(&timer, 3, p.n_reps);
+	// for(unsigned int i=0; i< NUM_LAYERS ; i++){
+    //             printf("\n lay[%d] = %f:",i, (dpucpu[i]/p.n_reps)*1e3);
+    //     }
 
-	printf("\nTotal Inter-DPU Time (ms): ");
-	print(&timer, 4, p.n_reps);
-	for(int i=0; i< NUM_LAYERS ; i++){
-                printf("\n lay[%d] = %f:",i, (interdpu[i]/p.n_reps)*1e3);
-    	}
-	printf("\nSec Cal Time(ms): %f \nMerge Time(ms): %f\n  verification time: %f\n", sec*1e3, (merge/p.n_reps)*1e3, (verif/p.n_reps)*1e3);
-	for(int i=0; i< NUM_LAYERS ; i++){
-                printf("\n CPU__lay[%d] = %f:",i, (cpu[i]/p.n_reps*1e3));
-        }
+	// printf("\nTotal Inter-DPU Time (ms): ");
+	// print(&timer, 8, p.n_reps);
+	// for(unsigned int i=0; i< NUM_LAYERS ; i++){
+    //             printf("\n lay[%d] = %f:",i, (interdpu[i]/p.n_reps)*1e3);
+    // 	}
+	// printf("\nSec Cal Time(ms): %f \nMerge Time(ms): %f\n  verification time: %f\n", sec*1e3, (merge/p.n_reps)*1e3, (verif/p.n_reps)*1e3);
+	
+	// printf("\nTotal Inter-DPU Time (ms): ");
+	// print(&timer, 9, p.n_reps);
+	// for(unsigned int i=0; i< NUM_LAYERS ; i++){
+    //             printf("\n CPU__lay[%d] = %f:",i, (cpu[i]/p.n_reps*1e3));
+    //     }
+	printf("\nPrecomputation  Time(ms): %f", sec*1e3);
+	float cpuside = (timer.time[9]) / (1000*p.n_reps);
+    float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]) / (1000*p.n_reps);
+    float execution_time = fmax(cpuside,dpuside) + (timer.time[8])/ (1000*p.n_reps);
+    printf("\nExecution time: %f ms", execution_time );
 
 #if ENERGY
 	printf("Energy (J): %f J\t", avg_energy);
