@@ -771,6 +771,7 @@ int main(int argc, char **argv) {
     float execution_time = fmax(cpuside,dpuside) + (timer.time[8])/ (1000*p.n_reps);
     printf("\nExecution time: %f ms", execution_time );
 
+
 #if ENERGY
 	printf("Energy (J): %f J\t", avg_energy);
 #endif
