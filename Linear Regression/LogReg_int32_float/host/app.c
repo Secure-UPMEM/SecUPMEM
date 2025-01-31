@@ -35,8 +35,8 @@
 #endif
 
 //you need to find the best partitioning for each input to make sure that the CPU wil not be the bottleneck
-#define PART1 80
-#define PART2 80
+#define PART1 640
+#define PART2 640
 // Pointer declaration
 static T* X;
 static T* X_C;
@@ -201,30 +201,17 @@ static void GD_host_fp(T* X, T* Y, T* W, T** y_expected,T** gd_expected, uint32_
             W[m] = W[m] - (gradient_tmp[m] * lr) / (m_size>>OVERFLOW_SHIFT); 
             
         }
-        // if(i==1 || i == 0){
-        //         for(int i=0; i<10; i++){
-        //             for(int j=0; j<10; j++){
-        //                 printf("TEST:X:%d \n", X[i*n_size + j]);
-        //             }
-        //         }
-        // }
         free(gradient_tmp); 
     } // end iteration
 }
 #endif 
 static void GD_host_fp_test(T* X, T* Y, T* dot_product,T* gd_expected, uint32_t m_size, uint32_t n_size) {
 T* gradient_tmp = calloc(n_size, sizeof(T));
-// printf("1\n");
     for (uint32_t j = 0; j < m_size; ++j) {
-        //  printf("2\n");
             for (unsigned int l = 0; l < n_size; ++l) {
-                // avoid overflow
-                // printf("3\n");
                 
                 gradient_tmp[l] -= X[j*n_size + l] * (Y[j]-(dot_product[j]>> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); 
-            }
- // gradient done 
-            
+            } 
         }
 
     for (unsigned int l = 0; l < n_size; ++l) {
@@ -346,8 +333,7 @@ int main(int argc, char **argv) {
                 &input_args[i].start_row[id]); 
         }
     }
-    printf(" n_size_pad: %d, max_row: %d\n",n_size_pad, max_rows_per_dpu );
-    printf(" x size: %d\n",max_rows_per_dpu * nr_of_dpus * n_size_pad);
+    
     // Input/output allocation
     X = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T));
     X_C = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T)); 
@@ -394,8 +380,7 @@ int main(int argc, char **argv) {
     // Timer declaration
     Timer timer;
 
-    // Train the model on host
-    // clock_t start_cpu= clock();
+ 
     start(&timer, 0, 0);
     #ifdef FLOAT 
     GD_host(bufferX, bufferY, bufferW_host, m_size, n_size, iter_time, learning_rate); 
@@ -493,32 +478,25 @@ int main(int argc, char **argv) {
         // for (int s=0; s<PART ; s++){
 
         // #pragma omp parallel for //for smaller datasets the overhead of this is not worth it but for larger ones use it
+        uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
         for (int s = 0; s < PART1; s++) {
-            uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
-
             for (uint32_t i = 0; i < m_size / PART1; i++) {
                 int offset = s * (m_size / PART1) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
                     local_counter1[i * n_size + k] = (uint8_t)((offset * n_size + k) * sizeof(T));
                  }
              }
-
             AES_ECB_encrypt(&ctx, local_counter1);
-
-            // #pragma omp parallel for // can be used for larger dataset 
             for (uint32_t i = 0; i < m_size / PART1; i++) {
                 int offset = s * (m_size / PART1) + i;
-                Y_host[offset] = 0;
-                for (unsigned int k = 0; k < n_size; k += 4) {
-                    Y_host[offset] += local_counter1[i * n_size + k] * W_dpu_fp[k];
-                    Y_host[offset] += local_counter1[i * n_size + k + 1] * W_dpu_fp[k + 1];
-                    Y_host[offset] += local_counter1[i * n_size + k + 2] * W_dpu_fp[k + 2];
-                    Y_host[offset] += local_counter1[i * n_size + k + 3] * W_dpu_fp[k + 3];
+                int temp =  0;
+                for (unsigned int k = 0; k < n_size; k++) {
+                    temp += local_counter1[i * n_size + k] * W_dpu_fp[k];
                 }
-            }
-
-            free(local_counter1);
+                Y_host[offset] = temp;
+            }  
         }
+        free(local_counter1);
 
         // uint8_t* counter1 = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART1 * sizeof(uint8_t));
         // // #pragma omp parallel for shared(W, counter1)
@@ -584,7 +562,7 @@ int main(int argc, char **argv) {
         stop(&timer, 4); // DPU-CPU time 
         start(&timer, 7, rep);
         
-        #pragma omp parallel for
+        // #pragma omp parallel for
         for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus ; i++){
 		    Y_total[i] = Y_dpu[i] + Y_host[i];
         }
@@ -656,70 +634,29 @@ int main(int argc, char **argv) {
         // uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad)* sizeof(uint8_t));
 
         start(&timer, 9, rep);
-
+        // uint8_t* local_counter2 = malloc(n_size * (m_size / PART2) * sizeof(uint8_t));
+        uint8_t* local_counter2 = malloc(n_size * (m_size / PART2) * sizeof(uint8_t));
         // #pragma omp parallel for
         for (int s = 0; s < PART2; s++) {
-            uint8_t* local_counter2 = malloc(n_size * (m_size / PART2) * sizeof(uint8_t));
-            int shift_overflow = SHIFT_AMOUNT + OVERFLOW_SHIFT;
-
             for (uint32_t i = 0; i < m_size / PART2; i++) {
                 int offset = s * (m_size / PART2) + i;
-
-                // Use SIMD-friendly inner loop
                 for (unsigned int k = 0; k < n_size; k++) {
                     local_counter2[i * n_size + k] = (uint8_t)((offset * n_size + k) * sizeof(T));
                 }
             }
-
-            // Encrypt local_counter2 in-place
             AES_ECB_encrypt(&ctx, local_counter2);
-
-            // Parallelize gradient update loop
-            // #pragma omp parallel for
             for (uint32_t i = 0; i < m_size / PART2; i++) {
+                int shift_overflow = SHIFT_AMOUNT + OVERFLOW_SHIFT;
                 int offset = s * (m_size / PART2) + i;
-                int y_diff = (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT)) >> shift_overflow;
-
-                // Process gradient updates with unrolling
-                for (unsigned int k = 0; k < n_size; k += 4) {
-                    gradient_cpu[k] -= local_counter2[i * n_size + k] * y_diff;
-                    gradient_cpu[k + 1] -= local_counter2[i * n_size + k + 1] * y_diff;
-                    gradient_cpu[k + 2] -= local_counter2[i * n_size + k + 2] * y_diff;
-                    gradient_cpu[k + 3] -= local_counter2[i * n_size + k + 3] * y_diff;
+                int y_diff = (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT));
+                for (unsigned int k = 0; k < n_size; k ++) {
+                    gradient_cpu[k] -= local_counter2[i * n_size + k] * y_diff >> shift_overflow;
                 }
             }
 
-            free(local_counter2);
+            
         }
-
-        // #pragma omp parallel for //shared(Y, Y_total, gradient_cpu) private(counter2)
-        // for (int s = 0; s < PART2; s++) {
-        //     // #pragma omp parallel for
-        //     for (uint32_t i = 0; i < m_size/ PART2 ; i++) { //  
-        //         int offset = s * (m_size / PART2) + i;
-        //         for (unsigned int k = 0; k < n_size; k++) {
-        //             int local_off = i * n_size + k;
-        //             // counter[i] = (uint8_t)(0+(i*sizeof(T)));
-        //             counter2[local_off] = (uint8_t)(0+(((offset * n_size) + k) * sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
-        //         }
-        //     }
-
-        //     AES_ECB_encrypt(&ctx, counter2);
-        //     // #pragma omp parallel for
-        //     for (uint32_t i = 0; i < m_size/ PART2; i++) {//  
-        //         int offset = s * (m_size / PART2) + i;
-        //         // #pragma omp parallel for
-        //         for (unsigned int k = 0; k < n_size/4; k++) {
-        //             gradient_cpu[k] -= counter2[(i * n_size) + k] * (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset
-        //             gradient_cpu[k+1] -= counter2[(i * n_size) + k+1] * (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT);               
-        //             gradient_cpu[k+2] -= counter2[(i * n_size) + k+2] * (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT);
-        //             gradient_cpu[k+3] -= counter2[(i * n_size) + k+3] * (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT)) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT);
-        //         }
-        //     }
-        // }
-        
-                
-
+        free(local_counter2);
         stop(&timer, 9);
 
         // Retrive result
@@ -773,14 +710,14 @@ int main(int argc, char **argv) {
             W_dpu_fp[m] = W_dpu_fp[m] - (total_gradient[m]*learning_rate) / (m_size >> OVERFLOW_SHIFT); 
             #endif 
         }
-        // printf("iter: %d, gradient_dpu: %d, W_dpu_fp: %d\n", rep, gradient_dpu[0], W_dpu_fp[0]); 
+        stop(&timer, 5); // CPU reduction time 
         free(gradient_dpu); 
         free(gradient_cpu); 
         free(total_gradient); 
-        stop(&timer, 5); // CPU reduction time 
+        
 
-        if (rep % 100 == 0)
-            printf("DPU iter %d...\n", rep); 
+    //     if (rep % 100 == 0)
+    //         printf("DPU iter %d...\n", rep); 
     } // iter end 
 
     // Print trained weight at host 
@@ -829,30 +766,35 @@ int main(int argc, char **argv) {
     #endif
 
     // Print timing results
-    printf("CPU ");
+    printf("\nCPU :");
     print(&timer, 0, 1);
-    printf("init C-D ");
-    print(&timer, 1, 1);
-    printf("syn C-D ");
-    print(&timer, 2, 1); 
-    printf("DPU kernel ");
-    print(&timer, 3, 1);
-    printf("D-C ");
-    print(&timer, 4, 1);
-    printf("CPU reduction ");
-    print(&timer, 5, 1);
-    printf("CPU product ");
-    print(&timer, 6, 1);
-    printf("merge 1 ");
-    print(&timer, 7, 1);
-    printf("verif 1 ");
-    print(&timer, 8, 1);
-    printf("CPU gradient ");
-    print(&timer, 9, 1);
-    printf("merge 2 ");
-    print(&timer, 10, 1);
-    printf("verif 2 ");
-    print(&timer, 11, 1);
+    // printf("init C-D ");
+    // print(&timer, 1, 1);
+    // printf("syn C-D ");
+    // print(&timer, 2, 1); 
+    // printf("DPU kernel ");
+    // print(&timer, 3, 1);
+    // printf("D-C ");
+    // print(&timer, 4, 1);
+    // printf("CPU reduction ");
+    // print(&timer, 5, 1);
+    // printf("CPU product ");
+    // print(&timer, 6, 1);
+    // printf("merge 1 ");
+    // print(&timer, 7, 1);
+    // printf("verif 1 ");
+    // print(&timer, 8, 1);
+    // printf("CPU gradient ");
+    // print(&timer, 9, 1);
+    // printf("merge 2 ");
+    // print(&timer, 10, 1);
+    // printf("verif 2 ");
+    // print(&timer, 11, 1);
+
+    float cpuside = (timer.time[6]+timer.time[9]) / (1000);
+    float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
+    float execution_time = fmax(cpuside,dpuside) + (timer.time[8]+timer.time[7] + timer.time[5])/ (1000);
+    printf("\nExecution time: %f ms", execution_time );
 
 
     // Check output
