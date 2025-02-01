@@ -510,6 +510,17 @@ int main(int argc, char **argv) {
     // Timer declaration
     Timer timer;
 
+    T* tags1 = malloc(n_size * sizeof(T));
+    T* tags2 = malloc(m_size * sizeof(T));
+    srand(0);
+    for(unsigned int i=0; i< n_size; i++){ //we consider these tags are precomputed 
+       tags1[i] = rand()%25;
+    }
+    srand(0);
+    for(unsigned int i=0; i< m_size; i++){ //we consider these tags are precomputed
+       tags2[i] = rand()%25;
+    }
+
     // Train the model on host
     start(&timer, 0, 0);
     #ifdef FLOAT 
@@ -617,7 +628,6 @@ int main(int argc, char **argv) {
         AES_init_ctx(&ctx, key);
         start(&timer, 6, rep);
 
-
         for(uint32_t s=0; s < (PART); s++){ 
             uint8_t* counter1 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
 
@@ -638,6 +648,10 @@ int main(int argc, char **argv) {
                 Y_host[offset] = temp;
             }
             free(counter1);
+        }
+        T tagIterCurrent = 0; 
+        for( unsigned int t = 0; t < n_size; t++){
+            tagIterCurrent += tags1[t] * W_dpu_fp[t];
         }
 
         stop(&timer, 6);
@@ -701,6 +715,10 @@ int main(int argc, char **argv) {
             powers *= s1;
             verif+= (Y_total[i]) * powers;
         }
+        if(verif == tagIterCurrent){// Since we are using random numbers instead of precomputed tags this is not = True 
+            printf("Verified\n"); 
+        }
+
         stop(&timer, 9);
         
         start(&timer, 10, rep);
@@ -768,7 +786,7 @@ int main(int argc, char **argv) {
         
 
         start(&timer, 8, rep);
-
+        int tagIterCurrent1 = 0;
         for (int s = 0; s < PART2; s++) {
             uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART2 * sizeof(uint8_t));
             for(uint32_t i=0; i < (m_size/PART2); i++){ 
@@ -782,9 +800,11 @@ int main(int argc, char **argv) {
             
             for (uint32_t i = 0; i < m_size/PART2; i++) {
                 int offset = s * (m_size / PART2) + i;
+                
                 for (unsigned int k = 0; k < n_size; k++) {
                     gradient_cpu[k]+= counter2[(i * n_size) + k] * Y_temp[offset] >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
                 }
+                tagIterCurrent1 += tags2[offset] * Y_temp[offset]  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
             }
             free(counter2);
         
@@ -841,11 +861,18 @@ int main(int argc, char **argv) {
         int s2=10;
         T verifi=0;
         start(&timer, 11, rep);
-        for (int i = 0; i < n_size; i++){
-            verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
+        // for (int i = 0; i < n_size; i++){
+        //     verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
         
+        // }
+        int powers1 = 1;
+		for (unsigned int i = 0; i < n_size; i++){
+            powers *= s1;
+            verifi += (total_gradient[i]) * powers1;
+   	     }
+        if( tagIterCurrent1 == verifi){
+            printf("verified\n");
         }
-
         stop(&timer, 11);
 
         if (rep % 100 == 0)
@@ -883,6 +910,7 @@ int main(int argc, char **argv) {
     // Print timing results
     printf("CPU ");
     print(&timer, 0, 1);
+    printf("\n");
     // printf("init C-D ");
     // print(&timer, 1, 1);
     // printf("syn C-D ");
@@ -909,8 +937,10 @@ int main(int argc, char **argv) {
     float cpuside = (timer.time[6]+timer.time[10]+timer.time[8]) / (1000);
     float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
     float execution_time = fmax(cpuside,dpuside) + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
+    float actual_time = dpuside + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
     printf("Execution time: %f ms", execution_time );
-
+    //UPMEM servers has some extra overhead on CPU side
+    printf("\n\nExecution time without CPU overhead: %f ms\n\n", actual_time );
     
 
 // #if ENERGY

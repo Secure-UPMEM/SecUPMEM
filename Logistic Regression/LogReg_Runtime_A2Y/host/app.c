@@ -484,6 +484,17 @@ int main(int argc, char **argv) {
     // Timer declaration
     Timer timer;
 
+    T* tags1 = malloc(n_size * sizeof(T));
+    T* tags2 = malloc(m_size * sizeof(T));
+    srand(0);
+    for(unsigned int i=0; i< n_size; i++){ //we consider these tags are precomputed 
+       tags1[i] = rand()%25;
+    }
+    srand(0);
+    for(unsigned int i=0; i< m_size; i++){ //we consider these tags are precomputed
+       tags2[i] = rand()%25;
+    }
+
     // Train the model on host
     start(&timer, 0, 0);
     #ifdef FLOAT 
@@ -613,7 +624,10 @@ int main(int argc, char **argv) {
         }
         free(counter1);
     }
-
+    T tagIterCurrent = 0; 
+    for( unsigned int t = 0; t < n_size; t++){
+        tagIterCurrent += tags1[t] * W_dpu_fp[t];
+    }
 
     stop(&timer, 6);
 
@@ -684,6 +698,9 @@ int main(int argc, char **argv) {
     for (int i = 0; i < m_size; i++){
         powers *= s1;
         verif+= (Y_total[i]) * powers;
+    }
+    if(verif == tagIterCurrent){// Since we are using random numbers instead of precomputed tags this is not = True 
+        printf("Verified\n"); 
     }
     stop(&timer, 9);
 
@@ -760,7 +777,7 @@ int main(int argc, char **argv) {
     uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART2 * sizeof(uint8_t));
 
     start(&timer, 8, rep);
-    
+    int tagIterCurrent1 = 0;
     //  #pragma omp parallel for shared(Y, Y_total, gradient_cpu) private(counter2)
     for (int s = 0; s < PART2; s++) {
         for(uint32_t i=0; i < (m_size/PART2); i++){ 
@@ -778,9 +795,11 @@ int main(int argc, char **argv) {
             for (unsigned int k = 0; k < n_size; k++) {
                 gradient_cpu[k] += counter2[(i * n_size) + k] * (sigmoid[offset] - (Y_temp[offset])) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset  
             }
+            tagIterCurrent1 += tags2[offset] * Y_temp[offset]  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
         }
        
     }
+
     
     stop(&timer, 8);
     free(counter2);
@@ -819,9 +838,13 @@ int main(int argc, char **argv) {
     int s2=10;
     T verifi=0;
     start(&timer, 11, rep);
-    for (int i = 0; i < n_size; i++){
-        verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
-    
+    int powers1 = 1;
+    for (unsigned int i = 0; i < n_size; i++){
+        powers *= s1;
+        verifi += (total_gradient[i]) * powers1;
+        }
+    if( tagIterCurrent1 == verifi){
+        printf("verified\n");
     }
     stop(&timer, 11);
     // Update weight 
@@ -903,7 +926,10 @@ int main(int argc, char **argv) {
     float cpuside = (timer.time[6]+timer.time[10]+timer.time[8]) / (1000);
     float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
     float execution_time = fmax(cpuside,dpuside) + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
-    printf("Execution time: %f ms", execution_time );
+    float actual_time = dpuside + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
+    printf("\n\nExecution time with CPU overhead : %f ms", execution_time ); //UPMEM servers has some extra overhead on CPU side
+    printf("\n\nExecution time without CPU overhead: %f ms\n\n", actual_time );
+
 
 // #if ENERGY
 //     double energy;

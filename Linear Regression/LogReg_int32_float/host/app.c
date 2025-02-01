@@ -380,7 +380,17 @@ int main(int argc, char **argv) {
     // Timer declaration
     Timer timer;
 
- 
+    T* tags1 = malloc(n_size * sizeof(T));
+    T* tags2 = malloc(m_size * sizeof(T));
+    srand(0);
+    for(unsigned int i=0; i< n_size; i++){ //we consider these tags are precomputed 
+       tags1[i] = rand()%25;
+    }
+    srand(0);
+    for(unsigned int i=0; i< m_size; i++){ //we consider these tags are precomputed
+       tags2[i] = rand()%25;
+    }
+
     start(&timer, 0, 0);
     #ifdef FLOAT 
     GD_host(bufferX, bufferY, bufferW_host, m_size, n_size, iter_time, learning_rate); 
@@ -497,6 +507,11 @@ int main(int argc, char **argv) {
             }  
         }
         free(local_counter1);
+        //generating verification tag
+        T tagIterCurrent = 0; 
+        for( unsigned int t = 0; t < n_size; t++){
+            tagIterCurrent += tags1[t] * W_dpu_fp[t];
+        }
 
         // uint8_t* counter1 = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART1 * sizeof(uint8_t));
         // // #pragma omp parallel for shared(W, counter1)
@@ -578,6 +593,9 @@ int main(int argc, char **argv) {
             powers *= s1;
             verif+= (Y_total[i]) * powers;
    	     }
+        if(verif == tagIterCurrent){// Since we are using random numbers instead of precomputed tags this is not = True 
+            printf("Verified\n"); 
+        }
         stop(&timer, 8);
         //send result to DPU
         i = 0;
@@ -637,6 +655,7 @@ int main(int argc, char **argv) {
         // uint8_t* local_counter2 = malloc(n_size * (m_size / PART2) * sizeof(uint8_t));
         uint8_t* local_counter2 = malloc(n_size * (m_size / PART2) * sizeof(uint8_t));
         // #pragma omp parallel for
+        int tagIterCurrent1 = 0;
         for (int s = 0; s < PART2; s++) {
             for (uint32_t i = 0; i < m_size / PART2; i++) {
                 int offset = s * (m_size / PART2) + i;
@@ -652,11 +671,13 @@ int main(int argc, char **argv) {
                 for (unsigned int k = 0; k < n_size; k ++) {
                     gradient_cpu[k] -= local_counter2[i * n_size + k] * y_diff >> shift_overflow;
                 }
+                tagIterCurrent1 -= tags2[offset] * y_diff >> shift_overflow;
             }
 
             
         }
         free(local_counter2);
+
         stop(&timer, 9);
 
         // Retrive result
@@ -694,10 +715,18 @@ int main(int argc, char **argv) {
         //generate tag for the resutlts to be compared with the precomputed tags
         T verifi=0;
         start(&timer, 11, rep);
+        int powers1 = 1;
 		for (unsigned int i = 0; i < n_size; i++){
-       			 verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
-        
+            powers *= s1;
+            verifi += (total_gradient[i]) * powers1;
    	     }
+		// for (unsigned int i = 0; i < n_size; i++){
+       	// 		 verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
+        
+   	    //  }
+        if( tagIterCurrent1 == verifi){
+            printf("verified\n");
+        }
         stop(&timer, 11);
 
         // Update weight 
@@ -716,8 +745,8 @@ int main(int argc, char **argv) {
         free(total_gradient); 
         
 
-    //     if (rep % 100 == 0)
-    //         printf("DPU iter %d...\n", rep); 
+        if (rep % 100 == 0)
+            printf("DPU iter %d...\n", rep); 
     } // iter end 
 
     // Print trained weight at host 
@@ -766,8 +795,9 @@ int main(int argc, char **argv) {
     #endif
 
     // Print timing results
-    printf("\nCPU :");
+    printf("\nCPU ");
     print(&timer, 0, 1);
+    printf("\n");
     // printf("init C-D ");
     // print(&timer, 1, 1);
     // printf("syn C-D ");
@@ -794,7 +824,10 @@ int main(int argc, char **argv) {
     float cpuside = (timer.time[6]+timer.time[9]) / (1000);
     float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
     float execution_time = fmax(cpuside,dpuside) + (timer.time[8]+timer.time[7] + timer.time[5])/ (1000);
-    printf("\nExecution time: %f ms", execution_time );
+    float actual_time = dpuside + (timer.time[8]+timer.time[7] + timer.time[5])/ (1000);
+    printf("Execution time: %f ms", execution_time );
+    //UPMEM servers has some extra overhead on CPU side
+    printf("\n\nExecution time without CPU overhead: %f ms\n\n", actual_time );
 
 
     // Check output
