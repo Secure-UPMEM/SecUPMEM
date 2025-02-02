@@ -693,6 +693,7 @@ int main(int argc, char **argv) {
 
     int s1=10;
     T verif=0;
+
     start(&timer, 9, rep);
     int powers = 1;
     for (int i = 0; i < m_size; i++){
@@ -704,25 +705,18 @@ int main(int argc, char **argv) {
     }
     stop(&timer, 9);
 
-    //perform sigmoid
-    // newly comment added
-    int32_t* sumplus = calloc(max_rows_per_dpu * nr_of_dpus,sizeof(int32_t));
-    int32_t* sumin = calloc(max_rows_per_dpu * nr_of_dpus,sizeof(int32_t));
-    // printf("generation yao\n");
     start(&timer, 10, rep);
-    #pragma paralell for
+    // #pragma omp paralell for
     for(int j=0; j < max_rows_per_dpu; j++){
-        sumplus[j]=0.5+product[j];
-        sumin[j]=product[j]-0.5;
-        if(sumplus[j]>0) b1[j]=0;
+        if(0.5+Y_total[j] >= 0) b1[j]=0;
         else b1[j]=1;
-        if(sumin[j]>0) b2[j]=0;
+        if(Y_total[j]-0.5 >= 0) b2[j]=0;
         else b2[j]=1;
-        if((~b1[j] & b2[j]) == 1) sigmoid[j]= product[j];
+        if((~b1[j] & b2[j]) == 1) sigmoid[j] = Y_total[j];
         else if(b2[j] == 1) sigmoid[j]= 0;
         else sigmoid[j]= 1;
-
-        Y_temp[j] = Y_total[j] << SHIFT_AMOUNT;
+        // printf("sigmoid: %d\n", sigmoid[j]);
+        Y_temp[j] = sigmoid[i]- (Y_total[j] << SHIFT_AMOUNT);
     }
 
     stop(&timer, 10); 
@@ -793,12 +787,22 @@ int main(int argc, char **argv) {
         for (uint32_t i = 0; i < m_size/PART2; i++) {//  / PART
             int offset = s * (m_size / PART2) + i;
             for (unsigned int k = 0; k < n_size; k++) {
-                gradient_cpu[k] += counter2[(i * n_size) + k] * (sigmoid[offset] - (Y_temp[offset])) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset  
+                gradient_cpu[k] += counter2[(i * n_size) + k] *  (Y_temp[offset]) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset  
             }
-            tagIterCurrent1 += tags2[offset] * Y_temp[offset]  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
+            tagIterCurrent1 += tags2[offset] * (Y_temp[offset])  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
         }
        
     }
+    // for (uint32_t i = 0; i < m_size; i++) {//  / PART
+    //     // int offset = s * (m_size / PART2) + i;
+    //     // #pragma omp parallel for
+    //     int ylocal = (Y_temp[i]);
+    //     for (unsigned int k = 0; k < n_size; k++) {
+    //         gradient_cpu[k] += X[(i * n_size) + k] * (ylocal) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset  
+    //     }
+    //     // tagIterCurrent1 += tags2[offset] * (sigmoid[offset] - (Y_temp[offset]))  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
+    // }
+
 
     
     stop(&timer, 8);
@@ -840,7 +844,7 @@ int main(int argc, char **argv) {
     start(&timer, 11, rep);
     int powers1 = 1;
     for (unsigned int i = 0; i < n_size; i++){
-        powers *= s1;
+        powers1 *= s1;
         verifi += (total_gradient[i]) * powers1;
         }
     if( tagIterCurrent1 == verifi){
@@ -900,28 +904,28 @@ int main(int argc, char **argv) {
     print(&timer, 0, 1);
     printf("\n"); 
 
-    // printf("init C-D ");
-    // print(&timer, 1, 1);
-    // printf("syn C-D ");
-    // print(&timer, 2, 1); 
-    // printf("DPU kernel ");
-    // print(&timer, 3, 1);
-    // printf("D-C ");
-    // print(&timer, 4, 1);
-    // printf("CPU Part 1 ");
-    // print(&timer, 6, 1);
-    // printf("merge 1 ");
-    // print(&timer, 7, 1);
-    // printf("verif 1 ");
-    // print(&timer, 9, 1);
-    // printf("CPU sigmoid ");
-    // print(&timer, 10, 1);
-    // printf("CPU Part 2 ");
-    // print(&timer, 8, 1);
-    // printf("CPU reduction (merge 2) ");
-    // print(&timer, 5, 1);
-    // printf("verif 2 ");
-    // print(&timer, 11, 1);
+    printf("init C-D ");
+    print(&timer, 1, 1);
+    printf("syn C-D ");
+    print(&timer, 2, 1); 
+    printf("DPU kernel ");
+    print(&timer, 3, 1);
+    printf("D-C ");
+    print(&timer, 4, 1);
+    printf("CPU Part 1 ");
+    print(&timer, 6, 1);
+    printf("merge 1 ");
+    print(&timer, 7, 1);
+    printf("verif 1 ");
+    print(&timer, 9, 1);
+    printf("CPU sigmoid ");
+    print(&timer, 10, 1);
+    printf("CPU Part 2 ");
+    print(&timer, 8, 1);
+    printf("CPU reduction (merge 2) ");
+    print(&timer, 5, 1);
+    printf("verif 2 ");
+    print(&timer, 11, 1);
 
     float cpuside = (timer.time[6]+timer.time[10]+timer.time[8]) / (1000);
     float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
