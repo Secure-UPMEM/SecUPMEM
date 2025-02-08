@@ -109,6 +109,11 @@ from tricks.qr_embedding_bag import QREmbeddingBag
 from concurrent.futures import ThreadPoolExecutor
 import psutil
 
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
+import os
+import struct
+
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     try:
@@ -358,11 +363,12 @@ class DLRM_Net(nn.Module):
     #dpu 
     def create_emb(self, m, ln, weighted_pooling=None):
         emb_l = nn.ModuleList()
+        v_W_l = []
+
+
+        ############# new code added for security support###############
         emb_l2 = nn.ModuleList()
         emb_l_temp = nn.ModuleList()
-        v_W_l = []
-        ############# new code added for security support###############
-
         key = secrets.token_bytes(32)
 
         # Generate a random IV (Initialization Vector)
@@ -371,24 +377,8 @@ class DLRM_Net(nn.Module):
         # Create an AES cipher instance
         cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
 
-        #encryptor = cipher.encryptor()
-        #array_shape = emb_l.shape  # Shape of the array
-        #array_dtype = type(emb_l[0])  # Data type of the array
-        #size = np.prod(array_shape) * np.dtype(array_dtype).itemsize
-        #otp_bytes = encryptor.update(secrets.token_bytes(size))
-        #otp = np.frombuffer(otp_bytes, dtype= array_dtype).reshape(array_shape)
-
-        #emb_l_temp = emb_l
-        #emb_l = emb_l - otp
-        #emb_l2 = otp
-        #print("cpu side")
-        #print(emb_l2[:10])
-        #print("upmem side")
-        #print(emb_l[:10])
-        #print("total")
-        #print(emb_l_temp[:10])
-
         ############# end of new code added for security support###############
+        
 
         for i in range(0, ln.size):
             if ext_dist.my_size > 1:
@@ -432,6 +422,7 @@ class DLRM_Net(nn.Module):
                 W = np.random.uniform(
                     low=-np.sqrt(1 / n), high=np.sqrt(1 / n), size=(n, _m)
                 ).astype(np.float32)
+
                 encryptor = cipher.encryptor()
                 array_shape = W.shape  # Shape of the array
                 array_dtype = W.dtype  # Data type of the array
@@ -446,6 +437,7 @@ class DLRM_Net(nn.Module):
                 EE.embs.weight.data = torch.tensor(W1, requires_grad=True)
                 EE1.embs.weight.data = torch.tensor(W2, requires_grad=True)
                 EE2.embs.weight.data = torch.tensor(W, requires_grad=True)
+            
             else:
                 EE = nn.EmbeddingBag(n, m, mode="sum", sparse=True)
                 EE1 = nn.EmbeddingBag(n, m, mode="sum", sparse=True)
@@ -471,49 +463,26 @@ class DLRM_Net(nn.Module):
                 EE.weight.data = torch.tensor(W1, requires_grad=True)
                 EE1.weight.data = torch.tensor(W2, requires_grad=True)
                 EE2.weight.data = torch.tensor(W, requires_grad=True)
-                # approach 2
-                # EE.weight.data.copy_(torch.tensor(W))
-                # approach 3
-                # EE.weight = Parameter(torch.tensor(W),requires_grad=True)
-                # EE = QREmbeddingBag(
-                #     n,
-                #     m,
-                #     self.qr_collisions,
-                #     operation=self.qr_operation,
-                #     mode="sum",
-                #     sparse=True,
-                # )
-                # encryptor = cipher.encryptor()
-                # otp_bytes = encryptor.update(secrets.token_bytes(sizeof(np.float32)))
-                # otp = np.frombuffer(otp_bytes, dtype=np.uint8).reshape(65000,64)
-                # W = otp.astype(np.float32)
-                # EE.weight.data = torch.tensor(W1, requires_grad=True)
-                # #print(otp)
+                
+
 
             if weighted_pooling is None:
                 v_W_l.append(None)
+
             else:
                 v_W_l.append(torch.ones(n, dtype=torch.float32))
 
             emb_l.append(EE)
             emb_l2.append(EE1)
             emb_l_temp.append(EE2)
-            #print(emb_l)
-            #print(emb_l2)
-            #print(emb_l_temp)
-            #print("cpu side")
-            #for module in emb_l:
-            #    print(module.weight.data)
-            #print("upmem side")
-            #for module in emb_l2:
-            #    print(module.weight.data)
-            #print("total")
-            #for module in emb_l_temp:
-            #    print(module.weight.data)
+            # if(i == 0):
+            #     print("emb_l[0]")
+            #     print(EE.weight.data)
 
         if args.data_generation == "random":
             self.export_emb(emb_l)
-    
+
+        
         return emb_l, emb_l2, v_W_l
     
 
@@ -560,6 +529,7 @@ class DLRM_Net(nn.Module):
             self.sync_dense_params = sync_dense_params
             self.loss_threshold = loss_threshold
             self.loss_function=loss_function
+            
             if weighted_pooling is not None and weighted_pooling != "fixed":
                 self.weighted_pooling = "learned"
             else:
@@ -668,57 +638,53 @@ class DLRM_Net(nn.Module):
             lr.append(torch.Tensor(result).reshape(args.mini_batch_size,self.m_spa))
             lr[i].requires_grad=True
 
-        EE =  emb_l2[0]
-        key = secrets.token_bytes(32)
-        # # Generate a random IV (Initialization Vector)
-        iv = secrets.token_bytes(16)
-        # # Create an AES cipher instance
-        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-
-        start_cpu_part = time.process_time()
+        
         
         ly = []
-        for k, sparse_index_group_batch in enumerate(lS_i):
+        cpu_part_time=0
+        start_cpu_part = time.process_time()
+        # veriftag_temp = []
+        veriftag_temp = np.zeros(len(lS_i), dtype=np.uint32)
+        # veriftag_temp = np.array(veriftag_temp, dtype=np.uint32)
+        for k in range(len(lS_i)):
             sparse_offset_group_batch = lS_o[k]
+            sparse_index_group_batch = lS_i[k]
             per_sample_weights = None
-            # encryptor = cipher.encryptor()
-            # arraysize=EE.weight.data.shape
-            # size = np.prod(arraysize)
-            # arraytype=EE.weight.data.dtype
-            # otp_bytes = encryptor.update(secrets.token_bytes(size))
-            # otp = np.frombuffer(otp_bytes, dtype=np.uint8).reshape(arraysize)
-            # W = otp.astype(np.float32)
-            # W = W = np.random.uniform(
-            #         low=-10, high=10, size=(65000,64)
-            #     ).astype(np.float32)
-            # EE.weight.data = torch.tensor(W, requires_grad=True)
-            E = emb_l2[k]
-            # args_list = [cipher, EE]
-             # Create a multiprocessing pool with the desired number of processes
-            # num_processes = multiprocessing.cpu_count()  # Use all available CPU cores
-            # pool = multiprocessing.Pool(num_processes)
+            lris = []
+            temp_result = []
+            counter = 0
+            lris = np.array(lris, dtype=np.uint32)
+            # for idx, off in enumerate(sparse_index_group_batch):
+            # print(sparse_index_group_batch[0])
+            for idx in range(len(sparse_index_group_batch)):  
+                if counter%32 == 0: 
+                    # print(off)
+                    if(idx != 0): temp_result.append(lris)
+                    key = os.urandom(16)
+                    iv = os.urandom(16) 
+                    ctr = Counter.new(128, initial_value=int.from_bytes(iv, byteorder='big'))
+                    cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
+                    random_bytes = cipher.encrypt(b'\x00' * (32 * 65))
+                    one_time_pads_int = np.frombuffer(random_bytes, dtype=np.uint8)
+                    counter = 0
+                    lris = one_time_pads_int[0:65].copy()
+                    # veriftag_temp[k] = one_time_pads_int[64:65] #verif tags are considered 65 element
+                else:
+                    lris[:65] += one_time_pads_int[65*counter:65*(counter+1)]
+                    # veriftag_temp[k] += one_time_pads_int[65*(counter+1)-1:65*(counter+1)]
+                    
+                counter += 1
+                if(idx == (len(sparse_index_group_batch) - 1)):
+                    # lris = lris.tolist()
+                    temp_result.append(lris)
 
-            # Process the data in parallel
-            # pool.map(gen_ran, args_list)
-
-            # Close the pool and wait for all processes to finish
-            # pool.close()
-            # pool.join()
-
-            V = E(
-                sparse_index_group_batch,
-                sparse_offset_group_batch,
-                per_sample_weights=per_sample_weights,
-            )
-
-            ly.append(V)
-        
+            temp_result_np = np.array(temp_result, dtype=np.float32)
+            ly.append(torch.Tensor(temp_result_np).reshape(args.mini_batch_size,self.m_spa))
+            ly[k].requires_grad=True
+    
         end_cpu_part= time.process_time()
         cpu_part_time = end_cpu_part - start_cpu_part
-
-        print("cpu part time elapsed:", cpu_part_time)
-
-            #
+        print("cpu part time elapsed:", cpu_part_time*1000)
 
         #single host thread lookup
         """ for k in range(len(lS_i)):
@@ -765,8 +731,10 @@ class DLRM_Net(nn.Module):
                 j+=1
             print(" ")
             print("------------------------------------------------------------")
+            
             print("max diff:"+str(max_diff)) """
-        return lr, ly
+
+        return lr, ly, veriftag_temp
 
     #  using quantizing functions from caffe2/aten/src/ATen/native/quantized/cpu
     def quantize_embedding(self, bits):
@@ -911,22 +879,61 @@ class DLRM_Net(nn.Module):
         # debug prints
         # print("intermediate")
         # print(x.detach().cpu().numpy())
+        
 
-        # process sparse features(using embeddings), resulting in a list of row vectors
-        lr, ly = self.apply_emb(lS_o, lS_i, self.emb_l, self.emb_l2, self.v_W_l)
-        # for y in ly:
-        #     print(y.detach().cpu().numpy())
-        #print("ly")
-        #print(ly[0])
-        #print("lr")
-        #print(lr[0])
-        # total_l=[]
+        # tmp_emb = list(emb_l[k].parameters())[0].tolist()
+
+        m = len(self.emb_l)
+        n = self.emb_l[0].num_embeddings
+
+        veriftag = np.zeros((m))
+
+        lr, ly, veriftag = self.apply_emb(lS_o, lS_i, self.emb_l, self.emb_l2, self.v_W_l)
+
+        # print(len(veriftag[0]))
         start_merge = time.process_time()
         total_l = [ly[i] + lr[i] for i in range(len(ly))]
         end_merge = time.process_time()
         cpu_merge_time = end_merge - start_merge
 
-        print("cpu merge time elapsed:", cpu_merge_time)
+        s1 = 10 #we have just randomly selected this
+        verif = []
+        start_verif = time.process_time()
+
+        if isinstance(total_l, torch.Tensor):
+            total_l = total_l.cpu().detach().numpy().astype(np.uint64)  # Convert entire tensor
+        elif isinstance(total_l, list):  # If it's a list of tensors
+            total_l = np.array([t.cpu().detach().numpy() if isinstance(t, torch.Tensor) else t for t in total_l], dtype=np.uint64)
+
+        num_k = 65 
+        powers = np.power(s1, np.arange(num_k, dtype=np.uint64)).reshape(1, 1, num_k) 
+        weighted_sum_k = np.sum(total_l * powers, axis=2)
+        final_verification_values = np.sum(weighted_sum_k, axis=1)
+        # veriftag_np = np.array(veriftag, dtype=np.uint64)
+        # verified_mask = final_verification_values == veriftag_np
+
+        # Print results
+        for i in range(len(total_l)):
+            if(final_verification_values[i]  == veriftag[i]):
+                print(f"Verified at embedding table {i}")
+
+        # for i in range(len(total_l)):
+        #     temp_verif = 0
+        #     power = 1
+        #     for k in range(len(total_l[i][0])):
+        #         for j in range(len(total_l[i])):
+        #             temp_verif += total_l[i][j][k] * power 
+        #         power = (power * s1) % 1024
+
+        #     if(temp_verif == veriftag[i]):
+        #         print("verified")
+
+        end_verif = time.process_time()
+        cpu_verif_time = end_verif - start_verif
+
+        print("cpu merge time elapsed:", cpu_merge_time*1000)
+        print("cpu verif time elapsed:", cpu_verif_time*1000)
+
         #print("total_l")
         #print(total_l[0])
         # interact features (dense and sparse) 4075.90601  1.90590
@@ -1012,10 +1019,6 @@ class DLRM_Net(nn.Module):
         # embeddings
         lr, ly = self.apply_emb(lS_o, lS_i, self.emb_l, self.emb_l2, self.v_W_l)
         # debug prints
-        print("ly")
-        print(ly)
-        print("lr")
-        print(lr)
         # butterfly shuffle (implemented inefficiently for now)
         # WARNING: Note that at this point we have the result of the embedding lookup
         # for the entire batch on each device. We would like to obtain partial results
@@ -1627,6 +1630,7 @@ def run():
         # Custom Model-Data Parallel
         # the mlps are replicated and use data parallelism, while
         # the embeddings are distributed and use model parallelism
+
         dlrm = dlrm.to(device)  # .cuda()
         if dlrm.ndevices > 1:
             dlrm.emb_l, dlrm.emb_l2,  dlrm.v_W_l = dlrm.create_emb(

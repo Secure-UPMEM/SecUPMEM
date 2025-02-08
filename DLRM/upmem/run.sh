@@ -84,31 +84,31 @@ random_run() {
            --num-indices-per-lookup=32\
            --num-indices-per-lookup-fixed=True \
            --inference-only
-    python3 "${cwd}/../PIM-dlrm-new/dlrm_secure_pytorch.py" \
-           --arch-embedding-size=10000-10000-10000-10000-10000-10000-10000-10000-10000-10000 \
-           --arch-sparse-feature-size=64 \
-           --arch-mlp-bot=256-128-64 \
-           --arch-mlp-top=256-64-1 \
-           --data-generation=random \
-           --mini-batch-size=128 \
-           --num-batches=1 \
-           --num-indices-per-lookup=32\
-           --num-indices-per-lookup-fixed=True \
-           --inference-only
-    python3 "${cwd}/../PIM-dlrm-new/dlrm_s_pytorch.py" \
-           --arch-embedding-size=10000-10000-10000-10000-10000-10000-10000-10000-10000-10000 \
-           --arch-sparse-feature-size=64 \
-           --arch-mlp-bot=256-128-64 \
-           --arch-mlp-top=256-64-1 \
-           --data-generation=random \
-           --mini-batch-size=128 \
-           --num-batches=1 \
-           --num-indices-per-lookup=32\
-           --num-indices-per-lookup-fixed=True \
-           --inference-only
+    # python3 "${cwd}/../PIM-dlrm-new/dlrm_secure_pytorch.py" \
+    #        --arch-embedding-size=10000-10000-10000-10000-10000-10000-10000-10000-10000-10000 \
+    #        --arch-sparse-feature-size=64 \
+    #        --arch-mlp-bot=256-128-64 \
+    #        --arch-mlp-top=256-64-1 \
+    #        --data-generation=random \
+    #        --mini-batch-size=128 \
+    #        --num-batches=1 \
+    #        --num-indices-per-lookup=32\
+    #        --num-indices-per-lookup-fixed=True \
+    #        --inference-only
+    # python3 "${cwd}/../PIM-dlrm-new/dlrm_s_pytorch.py" \
+    #        --arch-embedding-size=10000-10000-10000-10000-10000-10000-10000-10000-10000-10000 \
+    #        --arch-sparse-feature-size=64 \
+    #        --arch-mlp-bot=256-128-64 \
+    #        --arch-mlp-top=256-64-1 \
+    #        --data-generation=random \
+    #        --mini-batch-size=128 \
+    #        --num-batches=1 \
+    #        --num-indices-per-lookup=32\
+    #        --num-indices-per-lookup-fixed=True \
+    #        --inference-only
 }
 # random_run() {
-#     python3 "${cwd}/../PIM-dlrm-new/dlrm_secure_pytorch.py" \
+#     python3 "dlrm_secure_pytorch.py" \
 #            --arch-embedding-size=10000-10000-10000-10000-10000-10000-10000-10000-10000-10000 \
 #            --arch-sparse-feature-size=64 \
 #            --arch-mlp-bot=256-128-64 \
@@ -120,7 +120,7 @@ random_run() {
 #            --num-indices-per-lookup-fixed=True \
 #            --inference-only
 # }
-# python3 dlrm_s_pytorch.py \
+# python3 dlrm_dpu_pytorch.py \
 #            --arch-embedding-size=65000-65000-65000-65000-65000-65000-65000-65000-65000-65000 \
 #            --arch-sparse-feature-size=64 \
 #            --arch-mlp-bot=1440-720-64 \
