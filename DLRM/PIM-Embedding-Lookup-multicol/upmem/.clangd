@@ -1,0 +1,52 @@
+CompileFlags:
+  Add:
+    [
+      -DMAX_INDICES_PER_LOOKUP=32,
+      -DMAX_BATCH_SIZE=64,
+      -DEMBEDDING_DIM=64,
+      -DBATCH_SIZE=64,
+      -DNR_RUN=100,
+      -DMAX_INDICES_PER_LOOKUP=32,
+      -DEMBEDDING_DEPTH=50000,
+      -DNR_EMBEDDING=9,
+      -DNR_TASKLETS=16,
+    ]
+---
+If:
+  PathMatch: src/dpu/.* # Configuration for dpu binaries
+CompileFlags:
+  Add:
+    [
+      --target=dpu-upmem-dpurte,
+      -I../../PIM-common,
+      -I../../include,
+    ]
+---
+If:
+  PathMatch: src/.*
+  PathExclude: .*\/dpu/.* # Configuration for host binaries
+CompileFlags: # Tweak the parse settings
+  Add:
+    [
+      -Iupmem/PIM-common,
+      -I../include,
+      -I/usr/include/dpu,
+      -ldpu,
+      -I/usr/lib/gcc/x86_64-linux-gnu/8/include,
+      -DNR_TASKLETS=16,
+      -lm,
+      --std=c11,
+      -fPIC,
+      -D_POSIX_C_SOURCE=199309L,
+    ]
+---
+If:
+  PathMatch: include/.*
+CompileFlags: # Tweak the parse settings
+  Add:
+    [
+      -shared,
+      -Wl,
+      -I/usr/include/dpu,
+      -ldpu,
+    ]

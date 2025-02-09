@@ -1,0 +1,15 @@
+[submodule "upmem/PIM-common"]
+	path = upmem/PIM-common
+	url = https://github.com/UBC-ECE-Sasha/PIM-common.git
+[submodule "dlrm"]
+	path = dlrm
+	url = https://github.com/UBC-ECE-Sasha/PIM-Embedding-dlrm.git
+[submodule "PIM-DeepRecSys"]
+	path = PIM-DeepRecSys
+	url = https://github.com/UBC-ECE-Sasha/PIM-DeepRecSys.git
+[submodule "PIM-dlrm-new"]
+	path = PIM-dlrm-new
+	url = https://github.com/upmem/PIM-dlrm.git
+[submodule "PIM-Pytorch"]
+	path = PIM-Pytorch
+	url = https://github.com/UBC-ECE-Sasha/PIM-Pytorch.git
