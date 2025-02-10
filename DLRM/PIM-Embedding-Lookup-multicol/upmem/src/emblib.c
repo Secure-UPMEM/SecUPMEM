@@ -484,12 +484,7 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
     double dpu_time_ms = dpu_time / multi_run;
 
     //The parallel cpu computation
-    
-    // printf("nr_embedding: %ld", nr_embedding);
-    // // printf("indices_len: %d", input_info->indices_len);
-    // printf("nr_batches: %ld", nr_batches);
-    // printf("nr_cols: %ld", nr_cols);
-    // printf("nr_rows: %ld", nr_rows);
+
     uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 	struct AES_ctx ctx;
     AES_init_ctx(&ctx, key);
@@ -535,10 +530,12 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
     }
     clock_t end = clock();
     double elapsed_cpu = ((double)(end - start) / CLOCKS_PER_SEC) * 1000;
-    printf("cpu part: %f \n", elapsed_cpu);
+    // printf("cpu part: %f \n", elapsed_cpu);
     free(first);
 
+    //end of cpu parallel
 
+    //CPU in case of precomputation
     uint8_t *** precomputed_result;
 	precomputed_result = malloc(nr_embedding * sizeof(uint8_t**));
     for(int i = 0; i < nr_embedding; i++){
@@ -566,10 +563,12 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
     }
     clock_t end1 = clock();
     double elapsed_cpu1 = ((double)(end1 - start1) / CLOCKS_PER_SEC) * 1000;
-    printf("cpu precomp part: %f \n", elapsed_cpu1);
+    // printf("cpu precomp part: %f \n", elapsed_cpu1);
     free(first1);
 
+    //end of CPU precomputation scheme
 
+    //start merge
     clock_t start_merge = clock();
     for(int i = 0; i < nr_embedding; i++){
         for(int j = 0; j < nr_batches ; j++){
@@ -580,7 +579,11 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
     }
     clock_t end_merge = clock();
     double elapsed_merge = ((double)(end_merge - start_merge) / CLOCKS_PER_SEC) * 1000;
-    printf("merge: %f \n", elapsed_merge);
+    // printf("merge: %f \n", elapsed_merge);
+
+    //end merge
+
+    //start verif
 
     int32_t* veriftags = malloc(nr_embedding * sizeof(int32_t));
     // srand(1);
@@ -604,9 +607,19 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
 
     clock_t end_verif = clock();
     double elapsed_verif= ((double)(end_verif - start_verif) / CLOCKS_PER_SEC) * 1000;
-    printf("verif: %f \n", elapsed_verif);
+    // printf("verif: %f \n", elapsed_verif);
+    
+    //end verif
+    double computation_time1 = fmax(elapsed_cpu, dpu_time_ms);
+    // printf("comp1:%f",computation_time1);
+    double computation_time2 = fmax(elapsed_cpu1, dpu_time_ms);
+    // printf("comp1:%f",computation_time2);
+    double exe_runtime = computation_time1 + elapsed_merge + elapsed_verif;
+    double exe_precomp = computation_time2 + elapsed_merge + elapsed_verif;
+    printf("\nExecution time for runtime scheme: %f\n", exe_runtime );
+    printf("Execution time for precomputation scheme: %f\n\n", exe_precomp );
+    
 
-    //end cpu parrallel
     
     {
         uint64_t cpu_nr_thread = CPU_NR_THREAD_MAX;

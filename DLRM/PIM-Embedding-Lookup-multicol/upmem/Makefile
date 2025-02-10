@@ -11,17 +11,17 @@ MAX_BATCH_SIZE=128
 MAX_INDICES_PER_LOOKUP_RAND=32
 
 # embedding information
-EMBEDDING_DIM=64
-EMBEDDING_DEPTH=300000
-NR_EMBEDDING=64
+EMBEDDING_DIM ?= 64
+EMBEDDING_DEPTH ?= 300000
+NR_EMBEDDING ?= 64
 
 # inputs information
-BATCH_SIZE=128
-INDICES_PER_LOOKUP=32
+BATCH_SIZE ?= 128
+INDICES_PER_LOOKUP ?= 32
 RAND_INPUT_SIZE=0
 
 # benchmark information
-NR_RUN=10
+NR_RUN ?= 10
 CHECK_RESULTS=1
 
 # CPU/DPU check rounding error margin
@@ -30,7 +30,7 @@ CHECK_RESULT_ABSOLUTE_ROUNDING_ERROR_MARGIN=5000
 build: build/bench build/embdpu
 
 build/bench: build/emblib
-	gcc -O3 -fopenmp -Wl,-rpath=build -Wall -mavx -msse4 -lm -lz -lpthread -L build/ -lemb -I include \
+	gcc -O3 -Wl,-rpath=build -Wall -mavx -msse4 -lm -lz -lpthread -L build/ -lemb -I include \
 		-DINDICES_PER_LOOKUP=${INDICES_PER_LOOKUP} \
 		-DEMBEDDING_DIM=${EMBEDDING_DIM} \
 		-DEMBEDDING_DEPTH=${EMBEDDING_DEPTH} \
@@ -41,7 +41,7 @@ build/bench: build/emblib
     
 build/emblib: src/*.c include/*.h
 	mkdir -p build
-	gcc -O3  -fopenmp -Wall -mavx -msse4 -lm -lz -lpthread -I include \
+	gcc -O3 -Wall -mavx -msse4 -lm -lz -lpthread -I include \
 		-DINDICES_PER_LOOKUP=${INDICES_PER_LOOKUP} \
 		-DCHECK_RESULTS=${CHECK_RESULTS} \
 		-DRAND_INPUT_SIZE=${RAND_INPUT_SIZE} \

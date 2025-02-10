@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "emb_types.h"
-#include "../../PIM-common/host/include/host.h"
+#include "../PIM-common/host/include/host.h"
 
 #include <assert.h>
 #include <dpu.h>

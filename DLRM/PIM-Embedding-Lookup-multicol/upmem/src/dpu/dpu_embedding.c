@@ -1,6 +1,6 @@
 // To build the code: dpu-upmem-dpurte-clang -o toy_dpu toy_dpu.c
 #include "common.h"
-#include "../../../PIM-common/common/include/common.h"
+#include "../../PIM-common/common/include/common.h"
 #include "emb_types.h"
 
 #include <barrier.h>

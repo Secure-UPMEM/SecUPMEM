@@ -700,11 +700,10 @@ int main(int argc, char **argv) {
     //             printf("\n CPU__lay[%d] = %f:",i, (cpu[i]/p.n_reps*1e3));
     //     }
 
-	// printf("\nPrecomputation  Time(ms): %f", sec*1e3);
 	float cpuside = (timer.time[9]) / (1000*p.n_reps);
     float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]) / (1000*p.n_reps);
     float execution_time = fmax(cpuside,dpuside) + (timer.time[8])/ (1000*p.n_reps);
-    printf("\nExecution time: %f ms\n", execution_time );
+    printf("\nExecution time: %f ms\n\n", execution_time );
 
 #if ENERGY
 	printf("Energy (J): %f J\t", avg_energy);
