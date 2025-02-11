@@ -13,7 +13,6 @@ cd ../../DLRM/PIM-Embedding-Lookup-multicol/upmem/
 ./run_functionality.sh
 
 echo " *********** Linear Regression training **********"
-sudo apt install  -y libgmp-dev
 cd ../../../'Linear Regression'/LogReg_int32_float/
 ./run_functionality.sh
 

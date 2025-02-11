@@ -24,6 +24,7 @@
 #include "../support/params.h"
 #include "../support/aes.h"
 // Define the DPU Binary path as DPU_BINARY here
+
 #ifndef DPU_BINARY
 #define DPU_BINARY "./bin/dpu_code"
 #endif
@@ -35,7 +36,7 @@
 #endif
 
 //you need to find the best partitioning for each input to make sure that the CPU wil not be the bottleneck
-#define PART1 640
+#define PART1 1024
 #define PART2 640
 // Pointer declaration
 static T* X;
@@ -286,6 +287,12 @@ int main(int argc, char **argv) {
     unsigned int m_size = p.m_size;
     unsigned int n_size = p.n_size;
 
+
+// # ifdef VERIF 
+//     m_size++;
+// # endif 
+
+
     printf("i = %d, lr = %.4f, m = %d, n = %d\n", iter_time, learning_rate, m_size, n_size); 
 
     // Initialize help data
@@ -346,6 +353,7 @@ int main(int argc, char **argv) {
     T* Y_host = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
     T* Y_dpu = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
     T* Y_total = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
+    T* Y_temp = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
     W = malloc(n_size_pad * sizeof(T)); 
 
     // init trainging dataset and weight for host 
@@ -482,17 +490,14 @@ int main(int argc, char **argv) {
         
         
         AES_init_ctx(&ctx, key);
+        uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
         start(&timer, 6, rep);
 
-        // // #pragma omp parallel for shared(W, counter1)
-        // for (int s=0; s<PART ; s++){
-
-        // #pragma omp parallel for //for smaller datasets the overhead of this is not worth it but for larger ones use it
-        uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
         for (int s = 0; s < PART1; s++) {
-            for (uint32_t i = 0; i < m_size / PART1; i++) {
+            uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
+            for (uint32_t i = 0; i < m_size / PART1; i++){
                 int offset = s * (m_size / PART1) + i;
-                for (unsigned int k = 0; k < n_size; k++) {
+                for (unsigned int k = 0; k < n_size; k++){
                     local_counter1[i * n_size + k] = (uint8_t)((offset * n_size + k) * sizeof(T));
                  }
              }
@@ -504,43 +509,19 @@ int main(int argc, char **argv) {
                     temp += local_counter1[i * n_size + k] * W_dpu_fp[k];
                 }
                 Y_host[offset] = temp;
-            }  
+            } 
+            free(local_counter1);
+            
         }
-        free(local_counter1);
+        
         //generating verification tag
         T tagIterCurrent = 0; 
         for( unsigned int t = 0; t < n_size; t++){
             tagIterCurrent += tags1[t] * W_dpu_fp[t];
         }
 
-        // uint8_t* counter1 = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART1 * sizeof(uint8_t));
-        // // #pragma omp parallel for shared(W, counter1)
-        // for (int s = 0; s < PART1; s++) {
-        //     // #pragma omp parallel for
-        //     for (uint32_t i = 0; i < m_size/ PART1 ; i++) { //  
-        //         int offset = s * (m_size / PART1) + i;
-        //         for (unsigned int k = 0; k < n_size; k++) {
-        //             int local_off = i * n_size + k;
-        //             // counter[i] = (uint8_t)(0+(i*sizeof(T)));
-        //             counter1[local_off] = (uint8_t)(0+(((offset * n_size) + k) * sizeof(T)));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
-        //         }
-        //     }
-        //     AES_ECB_encrypt(&ctx, counter1);
-        //     // #pragma omp parallel for
-        //     for(uint32_t i=0;i< (m_size/PART1); i++){ 
-        //         int offset = s * (m_size / PART1) + i;
-        //         Y_host[offset]=0;
-        //         for (unsigned int k = 0; k < n_size/4; k++) {
-        //             Y_host[offset] += counter1[(i*(n_size))+k] * W_dpu_fp[k]; 
-        //             Y_host[offset] += counter1[(i*(n_size))+k+1] * W_dpu_fp[k+1];
-        //             Y_host[offset] += counter1[(i*(n_size))+k+2] * W_dpu_fp[k+2];
-        //             Y_host[offset] += counter1[(i*(n_size))+k+3] * W_dpu_fp[k+3];
-        //         }
-        //     }
-        // }
-
          stop(&timer, 6);
-
+         
         // Run DPU kernel
         start(&timer, 3, rep); 
         #if ENERGY
@@ -647,16 +628,15 @@ int main(int argc, char **argv) {
         //kernel on cpu
         T* gradient_cpu = calloc(n_size, sizeof(T));
         AES_init_ctx(&ctx, key);
-
-        // uint8_t* counter2 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART2 )* sizeof(uint8_t));
-        // uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad)* sizeof(uint8_t));
-
+        
         start(&timer, 9, rep);
-        // uint8_t* local_counter2 = malloc(n_size * (m_size / PART2) * sizeof(uint8_t));
-        uint8_t* local_counter2 = malloc(n_size * (m_size / PART2) * sizeof(uint8_t));
+        for(uint32_t i=0;i< m_size ; i++){
+            Y_temp[i] = Y[i] - (Y_total[i] >> SHIFT_AMOUNT);
+        }
         // #pragma omp parallel for
         int tagIterCurrent1 = 0;
         for (int s = 0; s < PART2; s++) {
+            uint8_t* local_counter2 = malloc(n_size * (m_size / PART2) * sizeof(uint8_t));
             for (uint32_t i = 0; i < m_size / PART2; i++) {
                 int offset = s * (m_size / PART2) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
@@ -664,21 +644,26 @@ int main(int argc, char **argv) {
                 }
             }
             AES_ECB_encrypt(&ctx, local_counter2);
+            // #pragma omp parallel for
             for (uint32_t i = 0; i < m_size / PART2; i++) {
                 int shift_overflow = SHIFT_AMOUNT + OVERFLOW_SHIFT;
                 int offset = s * (m_size / PART2) + i;
-                int y_diff = (Y[offset] - (Y_total[offset] >> SHIFT_AMOUNT));
+                int y_diff = Y_temp[offset];
+                
                 for (unsigned int k = 0; k < n_size; k ++) {
                     gradient_cpu[k] -= local_counter2[i * n_size + k] * y_diff >> shift_overflow;
                 }
-                tagIterCurrent1 -= tags2[offset] * y_diff >> shift_overflow;
             }
-
-            
+            free(local_counter2); 
         }
-        free(local_counter2);
+
+
+        for (uint32_t i = 0; i < m_size; i++) {
+            tagIterCurrent1 -= tags2[i] * Y_temp[i] >> SHIFT_AMOUNT + OVERFLOW_SHIFT;
+        }
 
         stop(&timer, 9);
+        
 
         // Retrive result
         start(&timer, 4, rep); // DPU-CPU time 
@@ -704,7 +689,6 @@ int main(int argc, char **argv) {
             }
         } 
         //merge 
-        // start4 = clock();
         start(&timer, 10, rep);
         for (uint32_t x = 0; x < n_size; ++x) {
             total_gradient[x]= gradient_dpu[x] + gradient_cpu[x];
@@ -720,10 +704,6 @@ int main(int argc, char **argv) {
             powers *= s1;
             verifi += (total_gradient[i]) * powers1;
    	     }
-		// for (unsigned int i = 0; i < n_size; i++){
-       	// 		 verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
-        
-   	    //  }
         if( tagIterCurrent1 == verifi){
             printf("verified\n");
         }
@@ -826,7 +806,7 @@ int main(int argc, char **argv) {
     float execution_time = fmax(cpuside,dpuside) + (timer.time[8]+timer.time[7] + timer.time[5])/ (1000);
     float actual_time = dpuside + (timer.time[8]+timer.time[7] + timer.time[5])/ (1000);
     printf("Execution time: %f ms", execution_time );
-    //UPMEM servers has some extra overhead on CPU side
+    // UPMEM servers have some extra overhead on the CPU side, which won't be there in the future SDK release
     printf("\n\nExecution time without CPU overhead: %f ms\n\n", actual_time );
 
 
@@ -861,6 +841,26 @@ int main(int argc, char **argv) {
     }
 
     // Deallocation
+    free(Y_host);
+    free(Y_dpu);
+    free(Y_total);
+    free(Y_temp);
+    free(tags1);
+    free(tags2);
+    free(counter);
+
+    // Free `y_expected` and its inner allocations
+    for (unsigned int i = 0; i < iter_time; i++) {
+        free(y_expected[i]);  // Free each row
+    }
+    free(y_expected);  // Free main pointer
+
+    // Free `gd_expected` and its inner allocations
+    for (unsigned int i = 0; i < iter_time; i++) {
+        free(gd_expected[i]);  // Free each row
+    }
+    free(gd_expected);
+
     free(input_args); 
     free(X_C);
     free(X_D);

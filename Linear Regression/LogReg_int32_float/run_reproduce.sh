@@ -1,6 +1,8 @@
 #Generating the data in Fig 18
 # m is the number of samples n is the number of features 
 # l is the learning rate and i is the number of iterations
+
+sudo apt install  -y libgmp-dev
 NR_DPUS=2048 NR_TASKLETS=16 make -B
 ./bin/host_code -m 40960 -n 16 -l 0.001 -i 1000
 ./bin/host_code -m 409600 -n 16 -l 0.001 -i 1000

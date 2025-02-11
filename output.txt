@@ -1,0 +1,16 @@
+ Functionality test
+ *********** MLP-Precomputation **********
+rm -f 	bin/.NR_DPUS_*_NR_TASKLETS_*_BL_.conf
+touch 	bin/.NR_DPUS_2050_NR_TASKLETS_16_BL_10.conf
+cc -o bin/gemv_host host/app.c -Wall -Wextra -g -Isupport -std=c11 -O3 -fopenmp -lm `dpu-pkg-config --cflags --libs dpu` -DNR_TASKLETS=16 -DNR_DPUS=2050 -DBL=10 
+dpu-upmem-dpurte-clang -Wall -Wextra -g -Isupport -O2 -DNR_TASKLETS=16 -DBL=10 -o bin/gemv_dpu dpu/task.c
+
+group:64
+Initialization started
+initialization done
+
+CPU Version Time (ms): 
+56.665000	
+Precomputation  Time(ms): 168.574005
+Execution time: 49.635700 ms
+
