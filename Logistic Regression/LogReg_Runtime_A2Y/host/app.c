@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <omp.h>
 #include <math.h>
+#include <time.h>
 
 #include "../support/common.h"
 #include "../support/timer.h"
@@ -32,7 +33,7 @@
 #include <dpu_probe.h>
 #endif
 
-#define PART 160
+#define PART 640
 #define PART2 640
 // Pointer declaration
 static T* X;
@@ -495,7 +496,7 @@ int main(int argc, char **argv) {
        tags2[i] = rand()%25;
     }
 
-    // Train the model on host
+    Train the model on host
     start(&timer, 0, 0);
     #ifdef FLOAT 
     GD_host(bufferX, bufferY, bufferW_host, m_size, n_size, iter_time, learning_rate); 
@@ -562,7 +563,7 @@ int main(int argc, char **argv) {
 
     stop(&timer, 1); // CPU-DPU transfer time stop
 
-   
+    double elapsed_merge = 0;
     // Iteration at DPU
     printf("Run program on DPU(s)...\n"); 
     for(uint32_t rep = 0; rep < iter_time; ++rep) {
@@ -596,40 +597,40 @@ int main(int argc, char **argv) {
     //cpu kernel computation
 
     AES_init_ctx(&ctx, key);
+    clock_t start_cpu = clock();
     start(&timer, 6, rep);
+    int partition = m_size/PART;
 
     for(uint32_t s=0; s < (PART); s++){ 
-        // uint8_t* counter1 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
-        uint8_t* counter1 = (uint8_t*) aligned_alloc(64, ((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
-
-        // #pragma omp parallel for
-        for(uint32_t i=0; i < (m_size/PART); i++){ 
-            int offset = ((m_size)/PART * s) + i;
-            // #pragma omp parallel for
-            for (unsigned int k = 0; k < n_size; k++) {
-                int local_offset = (offset * n_size) + k;
-                counter1[i*n_size+k] = (uint8_t)(local_offset * sizeof(T));
+        uint8_t* counter1 = (uint8_t*) aligned_alloc(64, ((m_size * n_size)/PART) * sizeof(uint8_t));
+        // uint8_t* counter1 = (uint8_t*) malloc(((m_size * n_size)/PART) * sizeof(uint8_t));
+        for(uint32_t i=0; i < partition; i++){ 
+            int offset = (partition* s) + i;
+            for (unsigned int k = 0; k < n_size; k++) { //Just getting some random counters
+                counter1[i*n_size+k] = (uint8_t)(offset+ k * sizeof(T));
             }
         }
         AES_ECB_encrypt(&ctx, counter1);
-        // #pragma omp parallel for
-        for(uint32_t i=0;i < (m_size)/PART; i++){ 
-            int offset = ((m_size)/PART * s) + i;
+        for(uint32_t i=0;i < partition; i++){ 
+            // int offset = (partition * s) + i;
             int temp = 0; 
-            #pragma omp simd reduction(+:temp)
+            // #pragma omp simd reduction(+:temp)
             for (unsigned int k = 0; k < n_size; k++) {
                 temp += counter1[i*n_size+k] * W_dpu_fp[k];
             }
-            Y_host[(offset)]=temp;
+            Y_host[((partition * s) + i)]=temp;
         }
         free(counter1);
     }
+    
     T tagIterCurrent = 0; 
     for( unsigned int t = 0; t < n_size; t++){
         tagIterCurrent += tags1[t] * W_dpu_fp[t];
     }
 
     stop(&timer, 6);
+    clock_t end_cpu = clock();
+    elapsed_merge += ((double)(end_cpu - start_cpu) / CLOCKS_PER_SEC) * 1000;
 
     // Run DPU kernel
     start(&timer, 3, rep); 
@@ -683,11 +684,6 @@ int main(int argc, char **argv) {
     for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus ; i++){
         Y_total[i] = product[i] + Y_host[i];
     }
-    // if(rep==1 || rep==0){
-    //         for(int i=0; i<10; i++){
-    //             printf("y_d: %d, y_c: %d, y_t: %d, y_expexted: %d\n", product[i],Y_host[i],Y_total[i], y_expected[rep][i]);
-    //         }
-    // }
 
     stop(&timer, 7);
 
@@ -707,16 +703,14 @@ int main(int argc, char **argv) {
 
     start(&timer, 10, rep);
     // #pragma omp paralell for
-    for(int j=0; j < max_rows_per_dpu; j++){
+    for(int j=0; j < m_size; j++){
         if(0.5+Y_total[j] >= 0) b1[j]=0;
         else b1[j]=1;
         if(Y_total[j]-0.5 >= 0) b2[j]=0;
         else b2[j]=1;
-        if((~b1[j] & b2[j]) == 1) sigmoid[j] = Y_total[j];
-        else if(b2[j] == 1) sigmoid[j]= 0;
-        else sigmoid[j]= 1;
-        // printf("sigmoid: %d\n", sigmoid[j]);
-        Y_temp[j] = sigmoid[i]- (Y_total[j] << SHIFT_AMOUNT);
+        // b1[j] = (0.5 + Y_total[j] < 0);
+        // b2[j] = (Y_total[j] - 0.5 < 0);
+        sigmoid[j]= (~b2[j]) + (~b1[j] & b2[j]) * Y_total[j];
     }
 
     stop(&timer, 10); 
@@ -762,52 +756,51 @@ int main(int argc, char **argv) {
     DPU_ASSERT(dpu_launch(dpu_set, DPU_SYNCHRONOUS)); 
 
     stop(&timer, 3);
+
+    for(int j = 0; j < m_size; j++) {
+        Y_temp[j] = (Y[j] << SHIFT_AMOUNT);
+    }
+
     #if ENERGY
     DPU_ASSERT(dpu_probe_stop(&probe));
     #endif
     T* gradient_cpu = calloc(n_size, sizeof(T));
     AES_init_ctx(&ctx, key);
 
-    uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART2 * sizeof(uint8_t));
-
+    partition = m_size/PART2;
+    int shift = (OVERFLOW_SHIFT+SHIFT_AMOUNT);
     start(&timer, 8, rep);
-    int tagIterCurrent1 = 0;
-    //  #pragma omp parallel for shared(Y, Y_total, gradient_cpu) private(counter2)
-    for (int s = 0; s < PART2; s++) {
-        for(uint32_t i=0; i < (m_size/PART2); i++){ 
-            int offset = ((m_size)/PART2 * s) + i;
-            for (unsigned int k = 0; k < n_size; k++) {
-                int local_offset = (offset * n_size) + k;
-                counter2[i*n_size+k] = (uint8_t)(local_offset * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
-            }
-        }
-
-        AES_ECB_encrypt(&ctx, counter2);
-
-        for (uint32_t i = 0; i < m_size/PART2; i++) {//  / PART
-            int offset = s * (m_size / PART2) + i;
-            for (unsigned int k = 0; k < n_size; k++) {
-                gradient_cpu[k] += counter2[(i * n_size) + k] *  (Y_temp[offset]) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset  
-            }
-            tagIterCurrent1 += tags2[offset] * (Y_temp[offset])  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
-        }
-       
+        
+    // #pragma omp parallel for schedule(static, 256)
+    for(int j = 0; j < m_size; j++) {
+        Y_temp[j] = sigmoid[j] - Y_temp[j];
     }
-    // for (uint32_t i = 0; i < m_size; i++) {//  / PART
-    //     // int offset = s * (m_size / PART2) + i;
-    //     // #pragma omp parallel for
-    //     int ylocal = (Y_temp[i]);
-    //     for (unsigned int k = 0; k < n_size; k++) {
-    //         gradient_cpu[k] += X[(i * n_size) + k] * (ylocal) >> (SHIFT_AMOUNT + OVERFLOW_SHIFT); // y with offset  
-    //     }
-    //     // tagIterCurrent1 += tags2[offset] * (sigmoid[offset] - (Y_temp[offset]))  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
-    // }
 
+    int tagIterCurrent1 = 0;
+    for (int s = 0; s < PART2; s++) {
+        uint8_t* counter2 = malloc((m_size * n_size)/PART2 * sizeof(uint8_t));
+        for(uint32_t i=0; i < partition; i++){ 
+            int offset = (partition * s) + i;
+            for (unsigned int k = 0; k < n_size; k++) {// just getting random counter (seed for this can be precomputed)
+                counter2[i*n_size+k] = (uint8_t)((offset)+k * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+            }
+        }
+        AES_ECB_encrypt(&ctx, counter2);
+        for (uint32_t i = 0; i < partition; i++) {
+            int offset = s * partition + i;
+            for (unsigned int k = 0; k < n_size; k++) {
+                gradient_cpu[k]+= counter2[(i * n_size) + k] * Y_temp[offset] >> shift;
+            }
+            // tagIterCurrent1 += tags2[offset] * Y_temp[offset]  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
+        }
+        free(counter2);
+    }
+    for(int j = 0; j < m_size; j++) {
+        tagIterCurrent1 += (tags2[j] * Y_temp[j]) >> shift;
+    }
 
-    
     stop(&timer, 8);
-    free(counter2);
-
+    
     // Retrive result
     start(&timer, 4, rep); 
     DPU_FOREACH(dpu_set, dpu, i) {
@@ -933,6 +926,7 @@ int main(int argc, char **argv) {
     float actual_time = dpuside + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
     printf("\n\nExecution time with CPU overhead : %f ms", execution_time ); //UPMEM servers has some extra overhead on CPU side
     printf("\n\nExecution time without CPU overhead: %f ms\n\n", actual_time );
+    printf("merge: %f \n", elapsed_merge);
 
 
 // #if ENERGY

@@ -1,0 +1,8 @@
+rm -f 	bin/.NR_DPUS_*_NR_TASKLETS_*_BL__TYPE_.conf
+touch 	bin/.NR_DPUS_2000_NR_TASKLETS_16_BL_10 _TYPE_INT32  .conf
+rm -f 	bin/.NR_DPUS_*_NR_TASKLETS_*_BL__TYPE_.conf
+touch 	bin/.NR_DPUS_2000_NR_TASKLETS_16_BL_10 _TYPE_INT32  .conf
+rm -f 	bin/.NR_DPUS_*_NR_TASKLETS_*_BL__TYPE_.conf
+touch 	bin/.NR_DPUS_2000_NR_TASKLETS_16_BL_10 _TYPE_INT32  .conf
+cc -o bin/host_code host/app.c -Wall -Wextra -g -Isupport -std=c11 -lm -O3 -fopenmp `dpu-pkg-config --cflags --libs dpu` -DNR_TASKLETS=16 -DNR_DPUS=2000 -DBL=10  -DINT32   -DENERGY=0
+dpu-upmem-dpurte-clang -Wall -Wextra -g -Isupport -O2 -DNR_TASKLETS=16 -DBL=10  -DINT32   -o bin/dpu_code dpu/task.c

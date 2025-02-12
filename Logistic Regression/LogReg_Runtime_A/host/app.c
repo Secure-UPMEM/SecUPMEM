@@ -33,7 +33,7 @@
 #include <dpu_probe.h>
 #endif
 
-#define PART 160
+#define PART 640
 #define PART2 640
 
 // Pointer declaration
@@ -80,81 +80,8 @@ static void read_input_fp(const float* X, const float* Y, T* X_fp, T* Y_fp, unsi
     printf("Successfully quantize input data.\n");
 }
 
-static int read_input_SUSY(T* X, T* Y, T* W, unsigned int m_size, unsigned int n_size) {
-    printf("Reading training dataset from file...\n"); 
-
-    FILE* fp;
-    char row[MAXCHAR];
-    char* token;
-    unsigned int m = 0, n = 0; 
-
-    fp = fopen("/home/upmem0013/gyuxin/SUSY.csv", "r"); // add file path of SUSY.csv 
-    if (fp == NULL) {
-        perror("Can't open file!");
-        return(-1);
-    } 
-
-    while (fgets(row, MAXCHAR, fp)) {//(m < m_size) {
-        //fgets(row, MAXCHAR, fp); 
-        token = strtok(row, ",");
-        Y[m] = atof(token); 
-
-        n = 0; 
-        token = strtok(NULL, ",");
-        while (token != NULL) {
-            X[m*n_size + n] = atof(token); 
-            token = strtok(NULL, ","); 
-            n++; 
-        } 
-        m++; 
-    }
-    fclose(fp); 
-    printf("\nSuccessfully generate input data. m = %d\n", m); 
-    if (m != m_size) {
-        printf("Error: invalid input m_size!\n");
-        return -1; 
-    }
-    return 0; 
-}
-
 #ifdef FLOAT // float 
-// Read training dataset from Skin_NonSkin.txt 
-static int read_input_Skin(T* X, T* Y, T* W, unsigned int m_size, unsigned int n_size) {
-    printf("Reading training dataset from Skin_NonSkin.csv...\n");
 
-    FILE* fp;
-    char row[MAXCHAR];
-    char* token;
-    unsigned int m = 0, n = 0;
-
-    fp = fopen("../Skin_NonSkin.csv", "r");  // add file path 
-    if (fp == NULL) {
-        perror("Can't open file!");
-        return(-1);
-    }
-
-    while (fgets(row, MAXCHAR, fp)) {
-        token = strtok(row, ",");
-        n = 0;
-        while (n < n_size) {//(token != NULL) {
-            X[m*n_size + n] = atof(token); 
-            token = strtok(NULL, ",");
-            n++;
-        } 
-        char temp = atoi(token);
-        if (temp == 1)
-            Y[m] = 1.0; 
-        else
-            Y[m] = 0.0; 
-        m++;
-    }
-    fclose(fp);
-    printf("\nSuccessfully generate input data. m = %d\n", m);
-    if (m != m_size) {
-        printf("Error: invalid input m_size!\n");
-        return -1;
-    }
-}
 
 // Train weight coefficients in the host 
 static void GD_host(T* X, T* Y, T* W, uint32_t m_size, uint32_t n_size, uint32_t iter_time, float lr) {
@@ -179,28 +106,13 @@ static void GD_host(T* X, T* Y, T* W, uint32_t m_size, uint32_t n_size, uint32_t
 
             for (unsigned int l = 0; l < n_size; ++l) {
                 gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - Y[j]) / ((int) m_size); 
-                // if (j == m_size-1) 
-                //     printf("iter: %d, dot_product: %f, sigmoid: %f, Y: %f, inidival gradient: %f\n", \
-                //         i, dot_product, sigmoid_temp, Y[j], gradient_tmp[l]); 
             }
-            // if(j < 4){
-            //     printf("dot_product at host: %f, sigmoid at host: %f\n", dot_product, sigmoid_temp);
-            //     printf("X at host: "); 
-            //     for (uint32_t each_attribute = 0; each_attribute < n_size; each_attribute++) {
-            //         printf("%f, ", X[j*n_size + each_attribute]); 
-            //     }
-            //     printf("\n"); 
-            // }
         } // gradient done 
         
         // update weight
         for (uint32_t m = 0; m < n_size; ++m) {
             W[m] = W[m] - (gradient_tmp[m] * lr); 
         }
-
-        // printf("i: %d, g: %f, g*lr: %.4f, w: %.4f\n", i, gradient_tmp[0], \
-        //     ((float) gradient_tmp[0] * lr), W[0]); 
-
         free(gradient_tmp); 
 
     } // end iteration
@@ -208,47 +120,10 @@ static void GD_host(T* X, T* Y, T* W, uint32_t m_size, uint32_t n_size, uint32_t
 }
 
 #else // int 
-// Read training dataset from Skin_NonSkin.txt 
-static int read_input_Skin(T* X, T* Y, T* W, unsigned int m_size, unsigned int n_size) {
-    printf("Reading training dataset from Skin_NonSkin.csv...\n");
-
-    FILE* fp;
-    char row[MAXCHAR];
-    char* token;
-    unsigned int m = 0, n = 0;
-
-    fp = fopen("../Skin_NonSkin.csv", "r");  // add file path 
-    if (fp == NULL) {
-        perror("Can't open file!");
-        return(-1);
-    }
-
-    while (fgets(row, MAXCHAR, fp)) {
-        token = strtok(row, ",");
-        n = 0;
-        while (n < n_size) {//(token != NULL) {
-            X[m*n_size + n] = atoi(token); 
-            token = strtok(NULL, ",");
-            n++;
-        } 
-        char temp = atoi(token);
-        if (temp == 1)
-            Y[m] = 1; 
-        else
-            Y[m] = 0; 
-        m++;
-    }
-    fclose(fp);
-    printf("\nSuccessfully generate input data. m = %d\n", m);
-    if (m != m_size) {
-        printf("Error: invalid input m_size!\n");
-        return -1;
-    }
-}
 
 // Train weight coefficients in the host
 static void GD_host_fp(T* X, T* Y, T* W, T** y_expected,T** gd_expected, uint32_t m_size, uint32_t n_size, uint32_t iter_time, float lr) {
-    printf("-----Start traing at host, fixed-point arithmetic-----\n");
+    printf("-----Start traing at host, int-----\n");
 
     // init weight with random value
     for (uint32_t n = 0; n < n_size; ++n){
@@ -299,29 +174,6 @@ static void GD_host_fp(T* X, T* Y, T* W, T** y_expected,T** gd_expected, uint32_
     } // end iteration
 }
 
-static void GD_host_fp1(T* X, T* Y, T* W, T* product,T* gd_expected, uint32_t m_size, uint32_t n_size) {
-    // printf("-----Start traing at host, fixed-point arithmetic-----\n");
-        // calculate gradient 
-        T* gradient_tmp = calloc(n_size, sizeof(T)); 
-
-        for (uint32_t j = 0; j < m_size; ++j) {
-            T sigmoid_temp = (int32_t) round((1<<SHIFT_AMOUNT)/(1.0 + exp(
-                (double) -(product[j]>>SHIFT_AMOUNT)/(1<<SHIFT_AMOUNT)))); 
-            // product[j] = sigmoid_temp;
-            for (unsigned int l = 0; l < n_size; ++l) {
-                // avoid overflow
-                gradient_tmp[l] += X[j*n_size + l] * (sigmoid_temp - \
-                    (Y[j]<<SHIFT_AMOUNT)) >> (OVERFLOW_SHIFT+SHIFT_AMOUNT); 
-            }
-        } // gradient done 
-        
-        // update weight
-        for (uint32_t m = 0; m < n_size; ++m) {
-            gd_expected[m] = gradient_tmp[m];
-        }
-        free(gradient_tmp); 
-    // end iteration
-}
 #endif 
 
 static void init_argument_tasklet(uint32_t tasklet_id, uint32_t nr_rows, uint32_t* rows_per_tasklet, uint32_t* start_row){
@@ -454,7 +306,7 @@ int main(int argc, char **argv) {
 
     //temp values for debugging dotproduct values
     T** y_expected = malloc(iter_time * sizeof(T*)); 
-    for(int i=0; i< iter_time; i++){
+    for (uint32_t i = 0; i < iter_time; ++i) {
         y_expected[i] = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T));
     }
     T* Y_host = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
@@ -504,7 +356,7 @@ int main(int argc, char **argv) {
 
     // temp value for debugging the dpu gradient  
     T** gd_expected = malloc(iter_time * sizeof(T*)); 
-    for(int i=0; i< iter_time; i++){
+    for(uint32_t i=0; i< iter_time; i++){
         gd_expected[i] = malloc(n_size * sizeof(T));
     }
     // Timer declaration
@@ -523,12 +375,12 @@ int main(int argc, char **argv) {
 
     // Train the model on host
     start(&timer, 0, 0);
-    #ifdef FLOAT 
-    GD_host(bufferX, bufferY, bufferW_host, m_size, n_size, iter_time, learning_rate); 
-    // printf("sigmoid: %f, x: %f\n", sigmoid_dpu(0), 1.0); 
-    #else 
-    GD_host_fp(bufferX, bufferY, bufferW_host,y_expected, gd_expected,m_size, n_size, iter_time, learning_rate); 
-    #endif 
+    // #ifdef FLOAT 
+    // GD_host(bufferX, bufferY, bufferW_host, m_size, n_size, iter_time, learning_rate); 
+    // // printf("sigmoid: %f, x: %f\n", sigmoid_dpu(0), 1.0); 
+    // #else 
+    // GD_host_fp(bufferX, bufferY, bufferW_host,y_expected, gd_expected,m_size, n_size, iter_time, learning_rate); 
+    // #endif 
     stop(&timer, 0); 
 
 
@@ -628,24 +480,26 @@ int main(int argc, char **argv) {
         AES_init_ctx(&ctx, key);
         start(&timer, 6, rep);
 
+        uint32_t partition = m_size/PART;
         for(uint32_t s=0; s < (PART); s++){ 
-            uint8_t* counter1 = malloc(((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART) * sizeof(uint8_t));
+            uint8_t* counter1 = malloc(((m_size * n_size)/PART) * sizeof(uint8_t));
+            // uint8_t* counter1 = (uint8_t*) aligned_alloc(64, ((m_size * n_size)/PART) * sizeof(uint8_t));
 
-            for(uint32_t i=0; i < (m_size/PART); i++){ 
-                int offset = ((m_size)/PART * s) + i;
+            for(uint32_t i=0; i < partition; i++){ 
+                int offset = (partition* s) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
-                    int local_offset = (offset * n_size) + k;
-                    counter1[i*n_size+k] = (uint8_t)(local_offset * sizeof(T));
+                    // int local_offset = (offset * n_size) + k;
+                    counter1[i*n_size+k] = (uint8_t)(offset+ (k) * sizeof(T));
             }
             }
             AES_ECB_encrypt(&ctx, counter1);
-            for(uint32_t i=0;i < (m_size)/PART; i++){ 
-                int offset = ((m_size)/PART * s) + i;
+            for(uint32_t i=0;i < partition; i++){ 
+                // int offset = (;
                 int temp = 0; 
                 for (unsigned int k = 0; k < n_size; k++) {
                     temp += counter1[i*n_size+k] * W_dpu_fp[k]; 
                 }
-                Y_host[offset] = temp;
+                Y_host[partition * s + i] = temp;
             }
             free(counter1);
         }
@@ -711,7 +565,7 @@ int main(int argc, char **argv) {
 
         start(&timer, 9, rep);
         int powers = 1;
-        for (int i = 0; i < m_size; i++){
+        for (uint32_t i = 0; i < m_size; i++){
             powers *= s1;
             verif+= (Y_total[i]) * powers;
         }
@@ -722,9 +576,9 @@ int main(int argc, char **argv) {
         stop(&timer, 9);
         
         start(&timer, 10, rep);
-        // #pragma omp paralell for
-        for(int j=0; j < max_rows_per_dpu *nr_of_dpus; j++){
-            int tem= (1<<SHIFT_AMOUNT);
+        int tem= (1<<SHIFT_AMOUNT);
+        // #pragma omp parallel for
+        for(uint32_t j=0; j < m_size; j++){
 
             if(Y_total[j] >= 15)
                 sigmoid[j] = 1; 
@@ -735,9 +589,7 @@ int main(int argc, char **argv) {
             else
                 sigmoid[j] = (int32_t) round((tem)/(1.0 + exp(
                     (double) -(Y_total[j]>>SHIFT_AMOUNT)/(tem)))); 
-            // sigmoid[j] =1 / (1 + exp((double)(-Y_total[j]))); // more accurate (fp)
 
-            Y_temp[j]= (sigmoid[j] - (Y[j]<<SHIFT_AMOUNT));
             }    
         stop(&timer, 10); 
 
@@ -779,35 +631,47 @@ int main(int argc, char **argv) {
         DPU_ASSERT(dpu_probe_stop(&probe));
         #endif
 
+        
     
         T* gradient_cpu = calloc(n_size, sizeof(T));
         AES_init_ctx(&ctx, key);
 
-        
+        for(int j=0; j < m_size; j++){
+            Y_temp[j]= (Y[j]<<SHIFT_AMOUNT);
+        } 
+
+        int tagIterCurrent1 = 0;
+        partition =m_size/PART2;
+        int shift = (OVERFLOW_SHIFT+SHIFT_AMOUNT);
 
         start(&timer, 8, rep);
-        int tagIterCurrent1 = 0;
+
+        for(int j=0; j < m_size; j++){
+            Y_temp[j]= sigmoid[j] - Y_temp[j];
+        } 
         for (int s = 0; s < PART2; s++) {
-            uint8_t* counter2 = malloc((max_rows_per_dpu * nr_of_dpus * n_size_pad)/PART2 * sizeof(uint8_t));
-            for(uint32_t i=0; i < (m_size/PART2); i++){ 
-                int offset = ((m_size)/PART2 * s) + i;
+            uint8_t* counter2 = malloc( n_size* partition * sizeof(uint8_t));
+            for(uint32_t i=0; i < (partition); i++){ //creating a  random counter to encrypt (we are just using random counter)
+                int offset = (partition * s) + i;
                 for (unsigned int k = 0; k < n_size; k++) {
-                    counter2[i*n_size+k] = (uint8_t)((offset*n_size+k) * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
+                    counter2[i*n_size+k] = (uint8_t)(offset+(k) * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
                 }
             }
-
             AES_ECB_encrypt(&ctx, counter2);
             
-            for (uint32_t i = 0; i < m_size/PART2; i++) {
-                int offset = s * (m_size / PART2) + i;
+            for (uint32_t i = 0; i < partition; i++) {
+                int offset = s * (partition) + i;
                 
                 for (unsigned int k = 0; k < n_size; k++) {
-                    gradient_cpu[k]+= counter2[(i * n_size) + k] * Y_temp[offset] >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
+                    gradient_cpu[k]+= counter2[(i * n_size) + k] * Y_temp[offset] >> shift;
                 }
-                tagIterCurrent1 += tags2[offset] * Y_temp[offset]  >> (OVERFLOW_SHIFT+SHIFT_AMOUNT);
+                // tagIterCurrent1 += tags2[offset] * Y_temp[offset]  >> (shift);
             }
             free(counter2);
         
+        }
+        for (uint32_t i = 0; i < m_size; i++) {
+            tagIterCurrent1 += tags2[i] * Y_temp[i]  >> (shift);
         }
 
         stop(&timer, 8);
@@ -861,13 +725,9 @@ int main(int argc, char **argv) {
         int s2=10;
         T verifi=0;
         start(&timer, 11, rep);
-        // for (int i = 0; i < n_size; i++){
-        //     verifi += (total_gradient[i]) * pow(s1,((n_size-i)));
-        
-        // }
         int powers1 = 1;
 		for (unsigned int i = 0; i < n_size; i++){
-            powers *= s1;
+            powers *= s2;
             verifi += (total_gradient[i]) * powers1;
    	     }
         if( tagIterCurrent1 == verifi){
@@ -911,28 +771,28 @@ int main(int argc, char **argv) {
     printf("CPU ");
     print(&timer, 0, 1);
     printf("\n");
-    // printf("init C-D ");
-    // print(&timer, 1, 1);
-    // printf("syn C-D ");
-    // print(&timer, 2, 1); 
-    // printf("DPU kernel ");
-    // print(&timer, 3, 1);
-    // printf("D-C ");
-    // print(&timer, 4, 1);
-    // printf("CPU Part 1 ");
-    // print(&timer, 6, 1);
-    // printf("merge 1 ");
-    // print(&timer, 7, 1);
-    // printf("verif 1 ");
-    // print(&timer, 9, 1);
-    // printf("CPU sigmoid ");
-    // print(&timer, 10, 1);
-    // printf("CPU Part 2 ");
-    // print(&timer, 8, 1);
-    // printf("CPU reduction (merge 2) ");
-    // print(&timer, 5, 1);
-    // printf("verif 2 ");
-    // print(&timer, 11, 1);
+    printf("init C-D ");
+    print(&timer, 1, 1);
+    printf("syn C-D ");
+    print(&timer, 2, 1); 
+    printf("DPU kernel ");
+    print(&timer, 3, 1);
+    printf("D-C ");
+    print(&timer, 4, 1);
+    printf("CPU Part 1 ");
+    print(&timer, 6, 1);
+    printf("merge 1 ");
+    print(&timer, 7, 1);
+    printf("verif 1 ");
+    print(&timer, 9, 1);
+    printf("CPU sigmoid ");
+    print(&timer, 10, 1);
+    printf("CPU Part 2 ");
+    print(&timer, 8, 1);
+    printf("CPU reduction (merge 2) ");
+    print(&timer, 5, 1);
+    printf("verif 2 ");
+    print(&timer, 11, 1);
 
     float cpuside = (timer.time[6]+timer.time[10]+timer.time[8]) / (1000);
     float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
@@ -995,7 +855,7 @@ int main(int argc, char **argv) {
     #endif
 
     // Deallocation
-    for(int i=0; i<iter_time; i++){
+    for(uint32_t i=0; i<iter_time; i++){
         free(y_expected[i]);
         free(gd_expected[i]);
     }
