@@ -37,10 +37,12 @@ To run a simple functionality check, execute:
 ./run_functionality.sh
 ```
 
-To regenerate our results execute:
+To regenerate our results, execute:
 ```
 ./run_reproduce.sh
 ```
+
+The comments in the ./run_reproduce.sh file explain which command corresponds to which figure.
 
 
 The run.sh file builds the host and DPU-side code, links them, and finally runs the program with our configurations.
