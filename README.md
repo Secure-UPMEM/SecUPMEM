@@ -23,7 +23,9 @@ https://github.com/upmem/PIM-Embedding-Lookup/tree/multicol/upmem
 
 Logistic Regression and Linear Regression: 
 
-https://github.com/CMU-SAFARI/pim-ml
+(Training:) https://github.com/CMU-SAFARI/pim-ml
+
+(Linear Regression inference: ) https://github.com/CMU-SAFARI/prim-benchmarks
 
 AES Implementation: 
 

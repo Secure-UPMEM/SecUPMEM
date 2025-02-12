@@ -490,7 +490,7 @@ int main(int argc, char **argv) {
         
         
         AES_init_ctx(&ctx, key);
-        uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
+        // uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
         start(&timer, 6, rep);
 
         for (int s = 0; s < PART1; s++) {
