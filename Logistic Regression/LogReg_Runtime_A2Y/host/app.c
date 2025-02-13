@@ -421,7 +421,7 @@ int main(int argc, char **argv) {
 
         // printf("row per dpu: %d\n", rows_per_dpu);
     }
-
+    omp_set_num_threads(8); 
     // Input/output allocation
     X = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T)); 
     Y = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T)); 
@@ -496,7 +496,8 @@ int main(int argc, char **argv) {
        tags2[i] = rand()%25;
     }
 
-    Train the model on host
+    // Train the model on host
+
     start(&timer, 0, 0);
     #ifdef FLOAT 
     GD_host(bufferX, bufferY, bufferW_host, m_size, n_size, iter_time, learning_rate); 
@@ -563,7 +564,6 @@ int main(int argc, char **argv) {
 
     stop(&timer, 1); // CPU-DPU transfer time stop
 
-    double elapsed_merge = 0;
     // Iteration at DPU
     printf("Run program on DPU(s)...\n"); 
     for(uint32_t rep = 0; rep < iter_time; ++rep) {
@@ -597,10 +597,17 @@ int main(int argc, char **argv) {
     //cpu kernel computation
 
     AES_init_ctx(&ctx, key);
-    clock_t start_cpu = clock();
+    // uint8_t** counter1 = malloc((m_size) * sizeof(uint8_t*));
+        
+    // for(int i=0; i<m_size; i++){
+    //     counter1[i] = malloc((n_size) * sizeof(uint8_t));
+    // }
     start(&timer, 6, rep);
-    int partition = m_size/PART;
-
+    // int partition = m_size/PART;
+    uint32_t partition = m_size/PART;
+    #pragma omp parallel
+    {
+        #pragma omp for schedule(static) 
     for(uint32_t s=0; s < (PART); s++){ 
         uint8_t* counter1 = (uint8_t*) aligned_alloc(64, ((m_size * n_size)/PART) * sizeof(uint8_t));
         // uint8_t* counter1 = (uint8_t*) malloc(((m_size * n_size)/PART) * sizeof(uint8_t));
@@ -622,16 +629,14 @@ int main(int argc, char **argv) {
         }
         free(counter1);
     }
-    
+    }
     T tagIterCurrent = 0; 
     for( unsigned int t = 0; t < n_size; t++){
         tagIterCurrent += tags1[t] * W_dpu_fp[t];
     }
-
     stop(&timer, 6);
-    clock_t end_cpu = clock();
-    elapsed_merge += ((double)(end_cpu - start_cpu) / CLOCKS_PER_SEC) * 1000;
-
+    // Calculate elapsed time in milliseconds
+     
     // Run DPU kernel
     start(&timer, 3, rep); 
     #if ENERGY
@@ -680,41 +685,49 @@ int main(int argc, char **argv) {
 
     start(&timer, 7, rep);
     //merge
-            
-    for(uint32_t i=0;i< max_rows_per_dpu * nr_of_dpus ; i++){
+
+#pragma omp parallel
+    {
+        #pragma omp for schedule(static) 
+    for(uint32_t i=0;i< m_size; i++){
         Y_total[i] = product[i] + Y_host[i];
+    }
     }
 
     stop(&timer, 7);
 
-    int s1=10;
+    int s1=2;
     T verif=0;
+    int flag1 =0;
 
     start(&timer, 9, rep);
     int powers = 1;
-    for (int i = 0; i < m_size; i++){
-        powers *= s1;
-        verif+= (Y_total[i]) * powers;
-    }
-    if(verif == tagIterCurrent){// Since we are using random numbers instead of precomputed tags this is not = True 
-        printf("Verified\n"); 
-    }
+        for (uint32_t i = 0; i < m_size; i++){
+            if (powers == 64) powers=1;
+            else powers *= s1;
+            verif+= (Y_total[i]) * powers;
+        }
+        if(verif == tagIterCurrent){// Since we are using random numbers instead of precomputed tags this is not = True 
+            flag1 = 1;// printf("Verified\n"); 
+        }
     stop(&timer, 9);
 
     start(&timer, 10, rep);
     // #pragma omp paralell for
-    for(int j=0; j < m_size; j++){
-        if(0.5+Y_total[j] >= 0) b1[j]=0;
-        else b1[j]=1;
-        if(Y_total[j]-0.5 >= 0) b2[j]=0;
-        else b2[j]=1;
-        // b1[j] = (0.5 + Y_total[j] < 0);
-        // b2[j] = (Y_total[j] - 0.5 < 0);
-        sigmoid[j]= (~b2[j]) + (~b1[j] & b2[j]) * Y_total[j];
+    #pragma omp parallel
+    {
+        #pragma omp for schedule(static) 
+        for(int j=0; j < m_size; j++){
+            if(0.5+Y_total[j] >= 0) b1[j]=0;
+            else b1[j]=1;
+            if(Y_total[j]-0.5 >= 0) b2[j]=0;
+            else b2[j]=1;
+            sigmoid[j]= (~b2[j]) + (~b1[j] & b2[j]) * Y_total[j];
+        }
     }
 
     stop(&timer, 10); 
-        // end
+            // end
     //send back results
     start(&timer, 2, rep);
     i = 0;
@@ -772,6 +785,7 @@ int main(int argc, char **argv) {
     start(&timer, 8, rep);
         
     // #pragma omp parallel for schedule(static, 256)
+    
     for(int j = 0; j < m_size; j++) {
         Y_temp[j] = sigmoid[j] - Y_temp[j];
     }
@@ -800,6 +814,7 @@ int main(int argc, char **argv) {
     }
 
     stop(&timer, 8);
+
     
     // Retrive result
     start(&timer, 4, rep); 
@@ -897,36 +912,35 @@ int main(int argc, char **argv) {
     print(&timer, 0, 1);
     printf("\n"); 
 
-    printf("init C-D ");
-    print(&timer, 1, 1);
-    printf("syn C-D ");
-    print(&timer, 2, 1); 
-    printf("DPU kernel ");
-    print(&timer, 3, 1);
-    printf("D-C ");
-    print(&timer, 4, 1);
-    printf("CPU Part 1 ");
-    print(&timer, 6, 1);
-    printf("merge 1 ");
-    print(&timer, 7, 1);
-    printf("verif 1 ");
-    print(&timer, 9, 1);
-    printf("CPU sigmoid ");
-    print(&timer, 10, 1);
-    printf("CPU Part 2 ");
-    print(&timer, 8, 1);
-    printf("CPU reduction (merge 2) ");
-    print(&timer, 5, 1);
-    printf("verif 2 ");
-    print(&timer, 11, 1);
+    // printf("init C-D ");
+    // print(&timer, 1, 1);
+    // printf("syn C-D ");
+    // print(&timer, 2, 1); 
+    // printf("DPU kernel ");
+    // print(&timer, 3, 1);
+    // printf("D-C ");
+    // print(&timer, 4, 1);
+    // printf("CPU Part 1 ");
+    // print(&timer, 6, 1);
+    // printf("merge 1 ");
+    // print(&timer, 7, 1);
+    // printf("verif 1 ");
+    // print(&timer, 9, 1);
+    // printf("CPU sigmoid ");
+    // print(&timer, 10, 1);
+    // printf("CPU Part 2 ");
+    // print(&timer, 8, 1);
+    // printf("CPU reduction (merge 2) ");
+    // print(&timer, 5, 1);
+    // printf("verif 2 ");
+    // print(&timer, 11, 1);
 
-    float cpuside = (timer.time[6]+timer.time[10]+timer.time[8]) / (1000);
+    float cpuside = (timer.time[6]+timer.time[8]) / (1000);
     float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
-    float execution_time = fmax(cpuside,dpuside) + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
-    float actual_time = dpuside + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
+    float execution_time = fmax(cpuside,dpuside) + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11]+timer.time[10])/ (1000);
+    float actual_time = dpuside + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11]+timer.time[10])/ (1000);
     printf("\n\nExecution time with CPU overhead : %f ms", execution_time ); //UPMEM servers has some extra overhead on CPU side
     printf("\n\nExecution time without CPU overhead: %f ms\n\n", actual_time );
-    printf("merge: %f \n", elapsed_merge);
 
 
 // #if ENERGY

@@ -223,7 +223,7 @@ int main(int argc, char **argv) {
     	for(int i=0;i< max_rows_per_dpu * nr_of_dpus * n_size_pad; i++){
 
         	ciphertext[i] = (uint32_t)first[i];
-		temp[i]= (A[i]) - ciphertext[i];	
+			temp[i]= (A[i]) - ciphertext[i];	
      	}
      	
 	printf("\n");
