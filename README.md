@@ -32,10 +32,19 @@ AES Implementation:
 https://github.com/kokke/tiny-AES-c/blob/master/aes.c
 
 
-To run our implementation, navigate to the specific folder and execute:
+To run a simple functionality check, execute:
 ```
-./run.sh
+./run_functionality.sh
 ```
+
+To regenerate our results, execute:
+```
+./run_reproduce.sh
+```
+
+The comments in the ./run_reproduce.sh file explain which command corresponds to which figure.
+
+
 The run.sh file builds the host and DPU-side code, links them, and finally runs the program with our configurations.
 
 ## Setup
