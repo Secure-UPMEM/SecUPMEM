@@ -587,7 +587,7 @@ int main(int argc, char **argv) {
             verif+= (Y_total[i]) * powers;
         }
         if(verif == tagIterCurrent){// Since we are using random numbers instead of precomputed tags this is not = True 
-            flag1 = 1;// printf("Verified\n"); 
+            flag1 = 1;// printf("Verified\n"); Also this can be performed in parallel with the next iteration computation.
         }
 
         stop(&timer, 9);
@@ -699,33 +699,7 @@ int main(int argc, char **argv) {
                 free(counter2);
             
             }
-        // }
-        // #pragma omp parallel
-        // {
-        //     #pragma omp for schedule(static)// nowait//private(copy)
-            // for (int s = 0; s < PART2; s++) {
-            //     uint8_t* counter2 = malloc( n_size* partition * sizeof(uint8_t));
-            //     for(uint32_t i=0; i < (partition); i++){ //creating a  random counter to encrypt (we are just using random counter)
-            //         int offset = (partition * s) + i;
-            //         for (unsigned int k = 0; k < n_size; k++) {
-            //             counter2[i*n_size+k] = (uint8_t)(offset+(k) * sizeof(T));//(uint8_t)(bufferX + (k * sizeof(T)));//[s*(max_rows_per_dpu * nr_of_dpus * n_size_pad/PART)+(i*(n_size_pad)+k)]);
-            //         }
-            //     }
-                
-            //     AES_ECB_encrypt(&ctx, counter2);
-                
-            //     for (uint32_t i = 0; i < partition; i++) {
-            //         int offset = s * (partition) + i;
-                    
-            //         for (unsigned int k = 0; k < n_size; k++) {
-            //             gradient_cpu[k]+= counter2[(i * n_size) + k] * Y_temp[offset] >> shift;
-            //         }
-            //         // tagIterCurrent1 += tags2[offset] * Y_temp[offset]  >> (shift);
-            //     }
-            //     free(counter2);
-            
-            // }
-        // }
+
         for (uint32_t i = 0; i < m_size; i++) {
             tagIterCurrent1 += tags2[i] * Y_temp[i]  >> (shift);
         }
@@ -777,12 +751,13 @@ int main(int argc, char **argv) {
         free(gradient_dpu); 
         stop(&timer, 5); // CPU reduction 
 
-        int s2=10;
+        int s2=2;
         T verifi=0;
         start(&timer, 11, rep);
         int powers1 = 1;
 		for (unsigned int i = 0; i < n_size; i++){
-            powers *= s2;
+            if(powers1 == 64) powers1 =1;
+            else powers1 *= s2;
             verifi += (total_gradient[i]) * powers1;
    	     }
         if( tagIterCurrent1 == verifi){
@@ -849,10 +824,10 @@ int main(int argc, char **argv) {
     // printf("verif 2 ");
     // print(&timer, 11, 1);
 
-    float cpuside = (timer.time[6]+timer.time[10]+timer.time[8]) / (1000);
+    float cpuside = (timer.time[6]+timer.time[8]) / (1000);
     float dpuside = (timer.time[1]+timer.time[2]+timer.time[3]+timer.time[4]) / (1000);
-    float execution_time = fmax(cpuside,dpuside) + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
-    float actual_time = dpuside + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11])/ (1000);
+    float execution_time = fmax(cpuside,dpuside) + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11]+timer.time[10])/ (1000);
+    float actual_time = dpuside + (timer.time[7]+timer.time[9] +timer.time[5]+ timer.time[11]+timer.time[10])/ (1000);
     printf("Execution time: %f ms", execution_time );
     //UPMEM servers has some extra overhead on CPU side
     printf("\n\nExecution time without CPU overhead: %f ms\n\n", actual_time );

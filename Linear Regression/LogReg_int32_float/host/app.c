@@ -488,11 +488,14 @@ int main(int argc, char **argv) {
 
         //runing the kernel on the CPU in parallel
         
-        
+        omp_set_num_threads(8); 
         AES_init_ctx(&ctx, key);
         // uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
         start(&timer, 6, rep);
 
+        #pragma omp parallel
+        {
+            #pragma omp for schedule(static)// nowait//private(copy)
         for (int s = 0; s < PART1; s++) {
             uint8_t* local_counter1 = malloc(n_size * (m_size / PART1) * sizeof(uint8_t));
             for (uint32_t i = 0; i < m_size / PART1; i++){
@@ -512,6 +515,7 @@ int main(int argc, char **argv) {
             } 
             free(local_counter1);
             
+        }
         }
         
         //generating verification tag
@@ -571,8 +575,10 @@ int main(int argc, char **argv) {
         start(&timer, 8, rep);
         int powers = 1;
 		for (unsigned int i = 0; i < m_size; i++){
-            powers *= s1;
+            // powers *= s1;
             verif+= (Y_total[i]) * powers;
+            if (powers == 64) powers == 1;
+            else powers *= s1;
    	     }
         if(verif == tagIterCurrent){// Since we are using random numbers instead of precomputed tags this is not = True 
             printf("Verified\n"); 
@@ -701,8 +707,9 @@ int main(int argc, char **argv) {
         start(&timer, 11, rep);
         int powers1 = 1;
 		for (unsigned int i = 0; i < n_size; i++){
-            powers *= s1;
             verifi += (total_gradient[i]) * powers1;
+            if (powers1 == 64) powers1 == 1;
+            else powers1 *= s1;
    	     }
         if( tagIterCurrent1 == verifi){
             printf("verified\n");

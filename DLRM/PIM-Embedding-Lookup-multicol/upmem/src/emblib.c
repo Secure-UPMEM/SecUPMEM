@@ -61,7 +61,7 @@ synthetic_populate(embedding_rank_mapping *rank_mapping, embedding_info *emb_inf
 
     uint64_t emb_data_type = CPT;
 
-    printf("generate synthetic tables\n");
+    // printf("generate synthetic tables\n");
     if (emb_data_type == RAND) {
         for (uint64_t embedding_index = 0; embedding_index < emb_info->nr_embedding;
              embedding_index++) {
@@ -542,6 +542,9 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
         precomputed_result[i] = malloc(nr_batches * sizeof(uint8_t*));
         for(int j = 0; j < nr_batches ; j++){
             precomputed_result[i][j] = malloc(nr_cols * sizeof(uint8_t));
+            for(int in = 0; in < nr_cols; in++){
+                precomputed_result[i][j][in] = rand()%50; //we are getting some random numbers for the precomputed results
+            }
         }
     }
     // int idx_per_row = input_info->indices_len[0]/nr_batches;
@@ -555,10 +558,10 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
         }
         AES_ECB_encrypt(&ctx, first1);
         for(int j = 0; j < nr_batches ; j++){
-                for(int in = 0; in < nr_cols; in++){
-                    cpupart_result[i][j][in] += first1[j * nr_cols + in];  
-                }
-            
+            for(int in = 0; in < nr_cols; in++){
+                precomputed_result[i][j][in] += first1[j * nr_cols + in];  
+            }
+        
         }
     }
     clock_t end1 = clock();
@@ -573,7 +576,7 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
     for(int i = 0; i < nr_embedding; i++){
         for(int j = 0; j < nr_batches ; j++){
             for(int in = 0; in < nr_cols; in++){
-                cpupart_result[i][j][in] += result_buffer[i][j * nr_cols + in];
+                cpupart_result[i][j][in] += result_buffer[i][j * nr_cols + in]; //incase of precomputation instead of cpu_results we use precomp results
             }
         }
     }
@@ -591,14 +594,15 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
         veriftags[i] = rand();
     }
     clock_t start_verif = clock();
-    int s1 =10;
+    int s1 =2;
     for(int i=0; i<nr_embedding; i++){
         int temp_verif = 0;
         int power = 1;
         for(int in = 0; in < nr_cols; in++){
             for(int j = 0; j < nr_batches ; j++){
-                temp_verif += cpupart_result[i][j][in] * power; 
-                power = (power * s1);
+                temp_verif += cpupart_result[i][j][in] * power; //we cann add them all to gether or get seperate tag for each batch
+                if(power == 64) power = 1;
+                else power = (power * s1);
             }
         // if(temp_verif == veriftags[i]) //some precomputed tags to compare with
         //         printf("verified");
@@ -611,13 +615,11 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
     
     //end verif
     double computation_time1 = fmax(elapsed_cpu, dpu_time_ms);
-    // printf("comp1:%f",computation_time1);
     double computation_time2 = fmax(elapsed_cpu1, dpu_time_ms);
-    // printf("comp1:%f",computation_time2);
     double exe_runtime = computation_time1 + elapsed_merge + elapsed_verif;
     double exe_precomp = computation_time2 + elapsed_merge + elapsed_verif;
-    printf("\nExecution time for runtime scheme: %f\n", exe_runtime );
-    printf("Execution time for precomputation scheme: %f\n\n", exe_precomp );
+    printf("\nExecution time for runtime scheme: %f\n", exe_runtime * 100);
+    printf("Execution time for precomputation scheme: %f\n\n", exe_precomp * 100);
     
 
     
@@ -688,6 +690,7 @@ synthetic_inference(uint32_t **indices, uint32_t **offsets, input_info *input_in
 #endif
         }
         double cpu_time_ms = cpu_time / multi_run;
+        printf("cpu time [ms] %lf\n\n",( cpu_time_ms ) *100);
 
 #if (CHECK_RESULTS == 1)
 

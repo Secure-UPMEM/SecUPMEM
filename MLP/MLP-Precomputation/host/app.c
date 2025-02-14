@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 	group_number= (uint64_t)((totalmramsize) / (inputsize+outputsize+matrixsize));
 	if (group_number >= batch_size) group_number = batch_size; 
 	i = 0;
-	printf("\ngroup:%ld\n",group_number);
+	// printf("\ngroup:%ld\n",group_number);
 	uint32_t nr_dpus_group = nr_of_dpus/group_number;
 	DPU_FOREACH(dpu_set, dpu, i) {
 		uint32_t rows_per_dpu;
@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
 		input_args[i].nr_rows = max_rows_per_dpu;
 	}
 	
-	printf("Initialization started\n");
+	printf("Initialization\n");
 	A = malloc(NUM_LAYERS * sizeof(T*)); //weights
 	for(int lay=0; lay< NUM_LAYERS; lay++){
 		A[lay] = malloc(max_rows_per_dpu * nr_of_dpus * n_size_pad * sizeof(T));
@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
 
 	// Initialize data with arbitrary data
 	init_data(A, B, m_size, n_size, batch_size);
-	printf("initialization done\n");
+	// printf("initialization done\n");
 
 	// Timer
 	Timer timer;
@@ -207,7 +207,8 @@ int main(int argc, char **argv) {
 			// T mul = pow(s1,((n_size)-(i%n_size))) * A[lay][i];
 			// 	firstTag1[lay][i%(n_size)] += mul;    
 			}   
-			pow *= seed; 
+			if(pow == 64) pow = 1;
+			else pow *= seed; 
    	    }
 	}
 	for(unsigned int b=0; b< batch_size; b++){
@@ -535,11 +536,12 @@ int main(int argc, char **argv) {
 						// #pragma omp parallel for
 						for (unsigned int i = 0; i < m_size; i++){
 							firstTag2[lay-1][b] += (C_total[b][i]) * pow;
-							pow *= seed;
+							if(pow == 64) pow = 1;
+							else pow *= seed; 
 						}
-						if (verifTag[lay-1][b]!=firstTag2[lay-1][b]){
-							flag = 0;
-						}
+						// if (verifTag[lay-1][b]!=firstTag2[lay-1][b]){
+						// 	flag = 0;
+						// }
 					}
 					//if(flag ==1) printf("verified layer: %d\n", lay-1); //for now its commented since we use randomly generated numbers for OTPs.
 					stopTimer(&timer1);
@@ -700,11 +702,12 @@ int main(int argc, char **argv) {
 					// #pragma omp parallel for
 					for (unsigned int i = 0; i < m_size; i++){
 						firstTag2[NUM_LAYERS-1][b] += (C_total[b][i]) * pow;
-						pow *= seed;
+						if(pow == 64) pow = 1;
+						else pow *= seed; 
 					}
-					if (verifTag[NUM_LAYERS-1][b]!=firstTag2[NUM_LAYERS-1][b]){
-						flag = 0;
-					}
+					// if (verifTag[NUM_LAYERS-1][b]!=firstTag2[NUM_LAYERS-1][b]){
+					// 	flag = 0;
+					// }
 				}
 				// if(flag ==1) printf("verified last layer\n"); // for now commented because of random numbers.
 				stopTimer(&timer1);
@@ -733,7 +736,7 @@ int main(int argc, char **argv) {
 
 	// Print timing results
 
-	printf("\nCPU Version Time (ms): \n");
+	printf("\nCPU Version Time (ms):");
 	print(&timer, 0, 1);
 
 	// printf("\n\nCPU-DPU Time (ms):");

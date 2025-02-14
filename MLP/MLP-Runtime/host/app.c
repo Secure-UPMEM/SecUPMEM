@@ -3,6 +3,8 @@
  * app.c
  * GEMV Host Application Source File
  *
+ * This is only for performance purposes 
+ * Please visit https://github.com/CMU-SAFARI/prim-benchmarks for the baseline implementation since our work is built upon it.
  */
 
 #include <stdio.h>
@@ -126,7 +128,7 @@ int main(int argc, char **argv) {
 	group_number= (uint64_t)((bala) / (inputsize+outputsize+matrixsize));
 	if (group_number >= batch_size) group_number = batch_size; 
 	i = 0;
-	printf("group:%ld\n",group_number);
+	// printf("group:%ld\n",group_number);
 	uint32_t nr_dpus_group = nr_of_dpus/group_number;
 	DPU_FOREACH(dpu_set, dpu, i) {
 		uint32_t rows_per_dpu;
@@ -177,18 +179,16 @@ int main(int argc, char **argv) {
 
 	// Initialize data with arbitrary data
 	init_data(A, B, m_size, n_size, batch_size);
-	printf("initialization done\n");
 
 	// Timer
 	Timer timer;
 	Timer1 timer1;
 
 	/*********************************verification************************************/
-	// an emulation of the security scheme
+	// an emulation of the security scheme you can also use AES CTR - We create a counter and then encrypt it to generate random numbers
 	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 	struct AES_ctx ctx;
 	float sec=0;
-	// uint8_t s1[]={ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 	
 #if VERIF
     T **firstTag1 = malloc((NUM_LAYERS)*sizeof(T*)); 
@@ -218,10 +218,9 @@ int main(int argc, char **argv) {
 			// firstTag1[lay][inside] =0;
 			for(unsigned int inside = 0; inside < (n_size); inside++){
 				firstTag1[lay][inside] += ( A[lay][i * m_size + inside]) * pow;
-			// T mul = pow(s1,((n_size)-(i%n_size))) * A[lay][i];
-			// 	firstTag1[lay][i%(n_size)] += mul;    
 			}   
-			pow *= seed; 
+			if(pow == 64) pow = 1;
+			else pow *= seed; 
    	    }
 	}
 	for(unsigned int b=0; b< batch_size; b++){
@@ -280,7 +279,6 @@ int main(int argc, char **argv) {
 	}
 	// Compute output on CPU (performance comparison and verification purposes)
 	start(&timer, 0, 0);
-	// startTimer(&timer1);
 
 	for(unsigned int lay = 0; lay < NUM_LAYERS; lay++){
 		for(unsigned int b=0 ; b< batch_size;b++){
@@ -291,25 +289,23 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
-	// stopTimer(&timer1);
-    // float cpuplain = getElapsedTime(timer1);
 
 	stop(&timer, 0);
 
 	float cpu[NUM_LAYERS]={0};
-	// float temp_gen[NUM_LAYERS]={0};
 	float cpudpu[NUM_LAYERS]={0};
 	float interdpu[NUM_LAYERS]={0};
 	float kernel[NUM_LAYERS]={0};
 	float dpucpu[NUM_LAYERS]={0};
 	float merge=0;
-	// T1* temp2 = malloc(n_size_pad  * sizeof(T1));
+	
 	T** C_total;
 	C_total = malloc(batch_size * sizeof(T*));
 	for(unsigned int b=0; b< batch_size; b++){
 		C_total[b] = malloc(max_rows_per_dpu * nr_of_dpus * sizeof(T));
 	}
 	uint8_t* first2 = malloc(n_size_pad * sizeof(uint8_t));
+	
 	//storing weights in UPMEM 
 	//Since it is fixed for all the users and batches we send them to UPMEM offline
 	for(int lay=0; lay <  NUM_LAYERS; lay++){
@@ -327,260 +323,261 @@ int main(int argc, char **argv) {
 
 	for (unsigned int rep = 0; rep < p.n_warmup + p.n_reps; rep++) {
 		for (unsigned int round = 0; round<= ((batch_size-1)/group_number); round++){
-				i = 0;
-				if (rep >= p.n_warmup){
-					start(&timer, 1, rep - p.n_warmup);//TIMER, 1 is for cpu-dpu communication
-					startTimer(&timer1);
-				}
-				i = 0;
-				DPU_FOREACH(dpu_set, dpu, i) {
-					// Copy input arguments to DPU
-					input_args[i].max_rows = max_rows_per_dpu;
+			i = 0;
+			if (rep >= p.n_warmup){
+				start(&timer, 1, rep - p.n_warmup);//TIMER, 1 is for cpu-dpu communication
+				startTimer(&timer1);
+			}
+			i = 0;
+			DPU_FOREACH(dpu_set, dpu, i) {
+				// Copy input arguments to DPU
+				input_args[i].max_rows = max_rows_per_dpu;
 
-					DPU_ASSERT(dpu_prepare_xfer(dpu, input_args + i));
-				}
-				DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "DPU_INPUT_ARGUMENTS", 0, sizeof(dpu_arguments_t), DPU_XFER_DEFAULT));
-				i = 0;
-				//send current layer
-				DPU_FOREACH(dpu_set, dpu, i) {
-					int32_t lay1 = 0;		
-					DPU_ASSERT(dpu_prepare_xfer(dpu, &lay1));
-				}
-				DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "CURRENT_LAYER", 0, sizeof(uint32_t), DPU_XFER_DEFAULT));
-				i = 0;
-				//sending ciphertext to cpu
-				//we need to send a group of batch to the UPMEM for parallel computation
-				DPU_FOREACH(dpu_set, dpu, i) {
-					DPU_ASSERT(dpu_prepare_xfer(dpu, ciphertext[(i%group_number)]));// ciphertext here is part of the B which is the vector
-				}
-				DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, NUM_LAYERS * (max_rows_per_dpu * (n_size_pad) * sizeof(T)) , n_size_pad * sizeof(T), DPU_XFER_DEFAULT));
-				
-				if (rep >= p.n_warmup){
-					stop(&timer, 1);
-					stopTimer(&timer1);
-					cpudpu[0] += getElapsedTime(timer1);
-				}
-				//end of CPU-DPU communication
+				DPU_ASSERT(dpu_prepare_xfer(dpu, input_args + i));
+			}
+			DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "DPU_INPUT_ARGUMENTS", 0, sizeof(dpu_arguments_t), DPU_XFER_DEFAULT));
+			i = 0;
+			//send current layer
+			DPU_FOREACH(dpu_set, dpu, i) {
+				int32_t lay1 = 0;		
+				DPU_ASSERT(dpu_prepare_xfer(dpu, &lay1));
+			}
+			DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "CURRENT_LAYER", 0, sizeof(uint32_t), DPU_XFER_DEFAULT));
+			i = 0;
+			//sending ciphertext to cpu
+			//we need to send a group of batch to the UPMEM for parallel computation
+			DPU_FOREACH(dpu_set, dpu, i) {
+				DPU_ASSERT(dpu_prepare_xfer(dpu, ciphertext[(i%group_number)]));// ciphertext here is part of the B which is the vector
+			}
+			DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, NUM_LAYERS * (max_rows_per_dpu * (n_size_pad) * sizeof(T)) , n_size_pad * sizeof(T), DPU_XFER_DEFAULT));
+			
+			if (rep >= p.n_warmup){
+				stop(&timer, 1);
+				stopTimer(&timer1);
+				cpudpu[0] += getElapsedTime(timer1);
+			}
+			
+			/********************************CPU computation in parallel to UPMEM ***********************************/
 
-				/********************************CPU computation in parallel to UPMEM ***********************************/
+			if (rep >= p.n_warmup) {
+				
+				startTimer(&timer1);
+				start(&timer, 9, rep - p.n_warmup);
+			}
+			for(unsigned int g = 0; g < group_number; g++){
+				// #pragma omp parallel for
+				for(unsigned int i=0;i< (n_size_pad); i++){
+					first2[i] = (uint8_t)(20+(i*sizeof(T)));
+				}
+				AES_init_ctx(&ctx, key);
+				AES_ECB_encrypt(&ctx, first2); 
+				gemv1(A[0],first2, m_size, n_size, C_host);
+			}
+			if (rep >= p.n_warmup){
+				stop(&timer, 9);
+				stopTimer(&timer1);
+				cpu[0] += getElapsedTime(timer1);
+			}
+			
+			/******************************** end of added cpu portion ************************/
+				
+			// Run kernel on DPUs
+			if (rep >= p.n_warmup)
+			{
+				start(&timer, 2, rep - p.n_warmup);
+				startTimer(&timer1);
+			}
 
-				if (rep >= p.n_warmup) {
-					
-					startTimer(&timer1);
-					start(&timer, 9, rep - p.n_warmup);
-				}
-				for(int g = 0; g< group_number; g++){
-					// #pragma omp parallel for
-					for(unsigned int i=0;i< (n_size_pad); i++){
-						first2[i] = (uint8_t)(20+(i*sizeof(T)));
-					}
-					AES_init_ctx(&ctx, key);
-					AES_ECB_encrypt(&ctx, first2); 
-					gemv1(A[0],first2, m_size, n_size, C_host);
-				}
-				if (rep >= p.n_warmup){
-					stop(&timer, 9);
-					stopTimer(&timer1);
-					cpu[0] += getElapsedTime(timer1);
-				}
-				
-				/******************************** end of added cpu portion ************************/
-				
-				// Run kernel on DPUs
-				if (rep >= p.n_warmup)
-				{
-					start(&timer, 2, rep - p.n_warmup);
-					startTimer(&timer1);
-				}
-				i=0;
-				DPU_ASSERT(dpu_launch(dpu_set, DPU_SYNCHRONOUS));
-				if (rep >= p.n_warmup){
-					stopTimer(&timer1);
-					kernel[0] += getElapsedTime(timer1);
-					stop(&timer, 2);
+			i=0;
+			DPU_ASSERT(dpu_launch(dpu_set, DPU_SYNCHRONOUS));
+			if (rep >= p.n_warmup){
+				stopTimer(&timer1);
+				kernel[0] += getElapsedTime(timer1);
+				stop(&timer, 2);
 			#if ENERGY
 					DPU_ASSERT(dpu_probe_stop(&probe));
 			#endif
 				}
 
-				//START LAYER 2 AND BEYOND
-				//timer 4 is for inter DPU-CPU Communication
-				for(int lay = 1; lay < NUM_LAYERS; lay++){
-					if (rep >= p.n_warmup){
-						start(&timer, 3, rep - p.n_warmup);
-						start(&timer, 4, rep - p.n_warmup);
-						startTimer(&timer1);		
-					}
+			//START LAYER 2 AND BEYOND
+			//timer 4 is for inter DPU-CPU Communication
+			for(int lay = 1; lay < NUM_LAYERS; lay++){
+				if (rep >= p.n_warmup){
+					start(&timer, 3, rep - p.n_warmup);
+					start(&timer, 4, rep - p.n_warmup);
+					startTimer(&timer1);		
+				}
 
-					i = 0;
-					// Copy C_dpu //THIS MEAN GETTING THE OUTPUT OF LAYER 1 TO MAKE LAYER 2 INPUT
-					DPU_FOREACH(dpu_set, dpu, i) {
-						DPU_ASSERT(dpu_prepare_xfer(dpu, C_dpu[(i%group_number)] + (i/group_number) * max_rows_per_dpu));
-					}
-					DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, (NUM_LAYERS * ( max_rows_per_dpu * n_size_pad * sizeof(T))) + n_size_pad * sizeof(T), max_rows_per_dpu * sizeof(T), DPU_XFER_DEFAULT));
+				i = 0;
+				// Copy C_dpu //THIS MEAN GETTING THE OUTPUT OF LAYER 1 TO MAKE LAYER 2 INPUT
+				DPU_FOREACH(dpu_set, dpu, i) {
+					DPU_ASSERT(dpu_prepare_xfer(dpu, C_dpu[(i%group_number)] + (i/group_number) * max_rows_per_dpu));
+				}
+				DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, (NUM_LAYERS * ( max_rows_per_dpu * n_size_pad * sizeof(T))) + n_size_pad * sizeof(T), max_rows_per_dpu * sizeof(T), DPU_XFER_DEFAULT));
 
-					if (rep >= p.n_warmup){
-						stop(&timer, 3);
-						stopTimer(&timer1);
-						dpucpu[lay-1] += getElapsedTime(timer1);
-					}
-					/*************************combine results*************************/
-					if (rep >= p.n_warmup)
-					{
-						startTimer(&timer1);
-						start(&timer, 8, rep - p.n_warmup);
-					}
-					// int partition=100;
-					// #pragma omp parallel for
-					// for(unsigned int i=0; i<max_rows_per_dpu * nr_of_dpus/partition ; i++){
-					// 	//#pragma omp parallel for
-					// 	for(unsigned int b=0; b< group_number;b++){
-					// 		//#pragma omp parallel for
-					// 		for(unsigned int part= i*100; part <= (i+1)*100; part++){
-					// 			C_total[b][part]= C_host[part] + C_dpu[b][part];
-					// 			if( C_total[b][part] <= 0)
-					// 				C_total[b][part]=0;
-					// 		}
-					// 	}
-					// }
-					for(unsigned int b=0; b< group_number;b++){
-						for(unsigned int i=0; i<m_size ; i++){
-							C_total[b][i]= C_host[i] + C_dpu[b][i];
-							if( C_total[b][i] < 0)
-									C_total[b][i]=0;
-						}
-					}
-
-					for(unsigned int b=0; b< group_number; b++){
-						verifTag[lay][b] =  0 ;
-						//#pragma omp parallel for
-						for (unsigned int i = 0; i < (n_size); i++){
-							verifTag[lay][b] += (firstTag1[lay][i] * C_total[b][i]);
-
-						}
-					}
-
-					if (rep >= p.n_warmup){
-						stopTimer(&timer1);
-						interdpu[lay-1] += getElapsedTime(timer1);
-					}
-
-					/*************************End combine results*************************/
-					
-					/************************verify*********************************/
-					#if VERIF
-					int flag = 1;
-					startTimer(&timer1);
-					T seed=2;//(uint8_t)(A[lay-1]);
-					for(unsigned int b=0; b< group_number; b++){
-						firstTag2[lay-1][b]=0;
-						T pow = 1;
-						// #pragma omp parallel for
-						for (unsigned int i = 0; i < m_size; i++){
-							firstTag2[lay-1][b] += (C_total[b][i]) * pow;
-							pow *= seed;
-						}
-						if (verifTag[lay-1][b]!=firstTag2[lay-1][b]){
-							flag = 0;
-						}
-					}
-					//if(flag ==1) printf("verified layer: %d\n", lay-1); //for now its commented since we use randomly generated numbers for OTPs.
+				if (rep >= p.n_warmup){
+					stop(&timer, 3);
 					stopTimer(&timer1);
-					verif += getElapsedTime(timer1);
-					#endif	
-					uint8_t* first1;
-					first1 = malloc(n_size_pad * sizeof(uint8_t));
-					//encryption
+					dpucpu[lay-1] += getElapsedTime(timer1);
+				}
+				/*************************combine results*************************/
+				if (rep >= p.n_warmup)
+				{
+					startTimer(&timer1);
+					start(&timer, 8, rep - p.n_warmup);
+				}
+				// int partition=100;
+				// #pragma omp parallel for
+				// for(unsigned int i=0; i<max_rows_per_dpu * nr_of_dpus/partition ; i++){
+				// 	//#pragma omp parallel for
+				// 	for(unsigned int b=0; b< group_number;b++){
+				// 		//#pragma omp parallel for
+				// 		for(unsigned int part= i*100; part <= (i+1)*100; part++){
+				// 			C_total[b][part]= C_host[part] + C_dpu[b][part];
+				// 			if( C_total[b][part] <= 0)
+				// 				C_total[b][part]=0;
+				// 		}
+				// 	}
+				// }
+				for(unsigned int b=0; b< group_number;b++){
+					for(unsigned int i=0; i<m_size ; i++){
+						C_total[b][i]= C_host[i] + C_dpu[b][i];
+						if( C_total[b][i] < 0)
+								C_total[b][i]=0;
+					}
+				}
+
+				for(unsigned int b=0; b< group_number; b++){
+					verifTag[lay][b] =  0 ;
+					//#pragma omp parallel for
+					for (unsigned int i = 0; i < (n_size); i++){
+						verifTag[lay][b] += (firstTag1[lay][i] * C_total[b][i]);
+
+					}
+				}
+
+				if (rep >= p.n_warmup){
+					stopTimer(&timer1);
+					interdpu[lay-1] += getElapsedTime(timer1);
+				}
+
+				/*************************End combine results*************************/
+				
+				/************************verify*********************************/
+				#if VERIF
+				int flag = 1;
+				startTimer(&timer1);
+				T seed=2;//(uint8_t)(A[lay-1]);
+				for(unsigned int b=0; b< group_number; b++){
+					firstTag2[lay-1][b]=0;
+					T pow = 1;
 					// #pragma omp parallel for
-					for(unsigned int i=0;i< n_size_pad; i++){
-						first1[i] = (uint8_t)(20+(i*sizeof(T))); 
+					for (unsigned int i = 0; i < m_size; i++){
+						firstTag2[lay-1][b] += (C_total[b][i]) * pow;
+						if(pow == 64) pow = 1;
+						else pow *= seed; 
 					}
+					// if (verifTag[lay-1][b]!=firstTag2[lay-1][b]){ // can be performed in parallel with next layer computation
+					// 	flag = 0;
+					// }
+				}
+				// if(flag ==1) printf("verified layer: %d\n", lay-1); //for now its commented since we use randomly generated numbers for OTPs.
+				stopTimer(&timer1);
+				verif += getElapsedTime(timer1);
+				#endif	
+				uint8_t* first1;
+				first1 = malloc(n_size_pad * sizeof(uint8_t));
+				//encryption
+				// #pragma omp parallel for
+				for(unsigned int i=0;i< n_size_pad; i++){
+					first1[i] = (uint8_t)(20+(i*sizeof(T))); 
+				}
 
-					AES_init_ctx(&ctx, key);
-					AES_ECB_encrypt(&ctx, first1);
-					for(unsigned int b=0; b< group_number; b++){
-						// #pragma omp parallel for
-						for(unsigned int i=0;i<n_size_pad; i++){
-							C_total[b][i] = C_total[b][i] - (T1)first1[i];
-						}
+				AES_init_ctx(&ctx, key);
+				AES_ECB_encrypt(&ctx, first1);
+				for(unsigned int b=0; b< group_number; b++){
+					// #pragma omp parallel for
+					for(unsigned int i=0;i<n_size_pad; i++){
+						C_total[b][i] = C_total[b][i] - (T1)first1[i];
 					}
-					free(first1);
+				}
+				free(first1);
 
-						/***************************edn verification*********************/
+					/***************************edn verification*********************/
 
 
-					// Sending the next layer input back to UPMEM
-					i = 0;
-					if (rep >= p.n_warmup)
-					{
-						stop(&timer, 8);
-						stop(&timer, 4);
-						startTimer(&timer1);
-						start(&timer, 1, rep - p.n_warmup);
-					}
-					i = 0;
-					//send current layer
-					DPU_FOREACH(dpu_set, dpu, i) {
-						int32_t lay1 = lay;		
-						DPU_ASSERT(dpu_prepare_xfer(dpu, &lay1));
-					}
-					DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "CURRENT_LAYER", 0, sizeof(int32_t), DPU_XFER_DEFAULT));
-					// I need to add privacy here.
-					i = 0;
-					DPU_FOREACH(dpu_set, dpu, i) {
-						DPU_ASSERT(dpu_prepare_xfer(dpu, C_total[(i%group_number)]));
-					}
-					DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, NUM_LAYERS * (max_rows_per_dpu * (n_size_pad) * sizeof(T)) , n_size_pad * sizeof(T), DPU_XFER_DEFAULT));
+				// Sending the next layer input back to UPMEM
+				i = 0;
+				if (rep >= p.n_warmup)
+				{
+					stop(&timer, 8);
+					stop(&timer, 4);
+					startTimer(&timer1);
+					start(&timer, 1, rep - p.n_warmup);
+				}
+				i = 0;
+				//send current layer
+				DPU_FOREACH(dpu_set, dpu, i) {
+					int32_t lay1 = lay;		
+					DPU_ASSERT(dpu_prepare_xfer(dpu, &lay1));
+				}
+				DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "CURRENT_LAYER", 0, sizeof(int32_t), DPU_XFER_DEFAULT));
+				// I need to add privacy here.
+				i = 0;
+				DPU_FOREACH(dpu_set, dpu, i) {
+					DPU_ASSERT(dpu_prepare_xfer(dpu, C_total[(i%group_number)]));
+				}
+				DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, NUM_LAYERS * (max_rows_per_dpu * (n_size_pad) * sizeof(T)) , n_size_pad * sizeof(T), DPU_XFER_DEFAULT));
 
-					if (rep >= p.n_warmup){
-						stopTimer(&timer1);
-						cpudpu[lay] += getElapsedTime(timer1);
-						stop(&timer, 1);
-						// stop(&timer, 4);
-					}
-					if (rep >= p.n_warmup)
-					{
-						start(&timer, 2, rep - p.n_warmup);
+				if (rep >= p.n_warmup){
+					stopTimer(&timer1);
+					cpudpu[lay] += getElapsedTime(timer1);
+					stop(&timer, 1);
+					// stop(&timer, 4);
+				}
+				if (rep >= p.n_warmup)
+				{
+					start(&timer, 2, rep - p.n_warmup);
 			#if ENERGY
 						DPU_ASSERT(dpu_probe_start(&probe));
 			#endif
-						startTimer(&timer1);
-					}
+					startTimer(&timer1);
+				}
 
-					DPU_ASSERT(dpu_launch(dpu_set, DPU_SYNCHRONOUS));
+				DPU_ASSERT(dpu_launch(dpu_set, DPU_SYNCHRONOUS));
 
-					if (rep >= p.n_warmup)
-					{
-						stopTimer(&timer1);
-						kernel[lay]+= getElapsedTime(timer1);
-						stop(&timer, 2);
+				if (rep >= p.n_warmup)
+				{
+					stopTimer(&timer1);
+					kernel[lay]+= getElapsedTime(timer1);
+					stop(&timer, 2);
 			#if ENERGY			
 						DPU_ASSERT(dpu_probe_stop(&probe));
 			#endif
-					}
-					/**********************cpu part***************************/
-					
-					/********************************add cpu portion ***********************************/
-					if (rep >= p.n_warmup) {
-						startTimer(&timer1);
-						start(&timer, 9, rep - p.n_warmup);
-					}
-					for(int g = 0; g< group_number; g++){
-						// #pragma omp parallel for
-						for(unsigned int i=0;i< (n_size_pad); i++){
-							first2[i] = (uint8_t)(10+(i*sizeof(T)));
-						}
-						AES_init_ctx(&ctx, key);
-						AES_ECB_encrypt(&ctx, first2); 
-						gemv1(A[lay],first2, m_size, n_size, C_host);
-					}
-					if (rep >= p.n_warmup){
-						stop(&timer, 9);
-						stopTimer(&timer1);
-						cpu[lay] += getElapsedTime(timer1);
-					}
+				}
+				/**********************cpu part***************************/
 				
-				/******************************** end of added cpu portion ************************/
+				/********************************add cpu portion ***********************************/
+				if (rep >= p.n_warmup) {
+					startTimer(&timer1);
+					start(&timer, 9, rep - p.n_warmup);
+				}
+				for(unsigned int g = 0; g< group_number; g++){
+					// #pragma omp parallel for
+					for(unsigned int i=0;i< (n_size_pad); i++){
+						first2[i] = (uint8_t)(10+(i*sizeof(T)));
+					}
+					AES_init_ctx(&ctx, key);
+					AES_ECB_encrypt(&ctx, first2); 
+					gemv1(A[lay],first2, m_size, n_size, C_host);
+				}
+				if (rep >= p.n_warmup){
+					stop(&timer, 9);
+					stopTimer(&timer1);
+					cpu[lay] += getElapsedTime(timer1);
+				}
+			
+			/******************************** end of added cpu portion ************************/
 				/**********************cpu part***************************/
 			}	
 			//getting final result	
@@ -634,20 +631,21 @@ int main(int argc, char **argv) {
 					// #pragma omp parallel for
 					for (unsigned int i = 0; i < m_size; i++){
 						firstTag2[NUM_LAYERS-1][b] += (C_total[b][i]) * pow;
-						pow *= seed;
+						if(pow == 64) pow = 1;
+						else pow *= seed; 
 					}
-					if (verifTag[NUM_LAYERS-1][b]!=firstTag2[NUM_LAYERS-1][b]){
-						flag = 0;
-					}
+					// if (verifTag[NUM_LAYERS-1][b]!=firstTag2[NUM_LAYERS-1][b]){// can be performed in parallel
+					// 	flag = 0;
+					// }
 				}
-				// if(flag ==1) printf("verified last layer\n"); // for now commented because of random numbers.
+				// if(flag ==1) printf("verified last layer\n"); // Since we used random values for tags, we cannot verify 
 				stopTimer(&timer1);
 				verif += getElapsedTime(timer1);
 			#endif	
 			if (rep >= p.n_warmup)
 				stop(&timer, 8);	
-				/***************************edn verification*********************/
-
+			/***************************end verification*********************/
+			
 
 			// Display DPU Logs
 			DPU_FOREACH(dpu_set, dpu) {

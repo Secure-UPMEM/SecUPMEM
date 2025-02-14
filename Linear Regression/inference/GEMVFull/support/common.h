@@ -28,7 +28,7 @@ struct dpu_info_t *dpu_info;
 #endif
 
 // Data type
-#define T uint32_t
+#define T int32_t
 
 //#ifndef ENERGY
 #define ENERGY 0

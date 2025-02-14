@@ -15,21 +15,14 @@
 #define roundup(n, m) ((n / m) * m + m)
 
 __host dpu_arguments_t DPU_INPUT_ARGUMENTS;
-uint32_t s = 0x2b;
-// GEMV
-static uint32_t gemv(T *bufferC, T *bufferA, T *bufferB, int pos) {
-	uint32_t result=0;
-	for (unsigned int i = 0; i < BLOCK_SIZE / sizeof(T); i++) {	
-		bufferC[pos] += bufferA[i] * bufferB[i];
-		#if INTG
-		result += (bufferA[i] * s);
-		#endif
-			
-	}
-	//printf("result:%d\n", result);
-	return result;
-}
 
+// GEMV
+static void gemv(T *bufferC, T *bufferA, T *bufferB, int pos) {
+	for (unsigned int i = 0; i < BLOCK_SIZE / sizeof(T); i++) {
+		bufferC[pos] += bufferA[i] * bufferB[i];
+	}
+	return;
+}
 
 // Barrier
 BARRIER_INIT(my_barrier, NR_TASKLETS);
@@ -40,13 +33,10 @@ int main() {
 #if PRINT
 	// printf("tasklet_id = %u\n", tasklet_id);
 #endif
-	
 	if (tasklet_id == 0){ // Initialize once the cycle counter
 		mem_reset(); // Reset the heap
-	//printf("T:%d", sizeof(T));
 	}
 	// Barrier
-	
 	barrier_wait(&my_barrier);
 
 	int32_t n_size = DPU_INPUT_ARGUMENTS.n_size;
@@ -63,7 +53,7 @@ int main() {
 	unsigned int dbl_chunks = chunks * element_per_cacheC; //chunks + chunks; 
 	rows_per_tasklet = dbl_chunks;
 	unsigned int rest_rows = nrows % (NR_TASKLETS * element_per_cacheC); //(NR_TASKLETS + NR_TASKLETS);
-	
+
 	if ((tasklet_id * element_per_cacheC) < rest_rows)
 		rows_per_tasklet += element_per_cacheC;
 	if (rest_rows > 0) {
@@ -104,8 +94,6 @@ int main() {
 
 	// Iterate over nr_rows
 	// for (unsigned int i = start_row; i < start_row + rows_per_tasklet; i += 2) {
-	int k=0;
-	uint32_t result=0;
 	for (unsigned int i = start_row; i < start_row + rows_per_tasklet; i += element_per_cacheC) {
 
 		mram_temp_addr_A = (uint32_t) (DPU_MRAM_HEAP_POINTER + i * n_size * sizeof(T));
@@ -149,10 +137,8 @@ int main() {
 				}
 
 				// Compute GEMV
-				result += gemv(cache_C, cache_A, cache_B, pos);
-				//printf("result:%d\n", result);
-				//printf("gemv");
-				
+				gemv(cache_C, cache_A, cache_B, pos);
+
 				// Update memory addresses
 				mram_temp_addr_A += BLOCK_SIZE;
 				mram_temp_addr_B += BLOCK_SIZE;
@@ -176,35 +162,17 @@ int main() {
 
 
 			mram_read((__mram_ptr void const*) (mram_temp_addr_B), cache_B, BLOCK_SIZE);
-			//uint32_t result=0;
-			//printf("n %u, n: %u \n", n_size, n);
+
 			for (j = 0; j < (int) (n_size - n); j++) {
-				// Compute GEMV.
-				
-				//printf("result:%u , a: %u\n",result,cache_A[j]);
-				//printf("result:%u , a: %u\n",result,cache_A[j]);
+				// Compute GEMV
 				if(j >= (int)(BLOCK_SIZE / sizeof(T))){ 
 					printf("error\n");
 					break;
 				}
 				cache_C[pos] += cache_A[j] * cache_B[j];
-				//printf("cache a :
-				//printf("tasklet:%d, pos:%d, result:%u , a: %u, B:%u\n",me(),pos,result,cache_A[j],cache_B[j]);
-				#if INTG
-				if(j == n_size-n-1) {
-					//k++;
-					if(cache_A[j] != result){
-						printf("Data Not Verified\n");
-						printf("tasklet:%d, pos:%d, result:%u , a: %u\n",me(),pos,result,cache_A[j]);		
-					}
-				result=0;
-				}
-				else 
-					result += (cache_A[j] * s);
-				#endif
 			}
 
-			
+
 			mram_temp_addr_A += (BLOCK_SIZE - ((BLOCK_SIZE / sizeof(T)) - (n_size - n)) * sizeof(T));
 			mram_temp_addr_B = mram_base_addr_B;
 
@@ -218,7 +186,6 @@ int main() {
 			}
 		}
 		// Write cache to current MRAM block
-		
 		mram_write(cache_C, (__mram_ptr void *) (mram_base_addr_C), 8);
 
 		// Update memory address
