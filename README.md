@@ -2,8 +2,13 @@
 
 [![DOI](https://zenodo.org/badge/921982568.svg)](https://doi.org/10.5281/zenodo.14736863)
 
+This is the open-source implementation for the paper:
 
-Enabling Low-Cost Secure Computing on Untrusted In-Memory Architectures
+[Enabling Low-Cost Secure Computing on Untrusted In-Memory Architectures](https://arxiv.org/abs/2501.17292)
+
+This work leverages multi-party computation (MPC) techniques, specifically arithmetic secret sharing and Yao’s garbled circuits, to outsource bandwidth-intensive computation securely to PIM. Additionally, we leverage precomputation optimization to prevent the CPU's portion of the MPC from becoming a bottleneck. We evaluate our approach using the UPMEM PIM system over various applications. We provided all the source codes and scripts for evaluating our scheme using UPMEM, the first publicly available PIM, over four data-intensive applications: Multilayer
+Perceptron inference (MLP), Deep Learning Recommendation Model inference (DLRM), linear regression training, and logistic regression training. This artifact allows researchers to
+reproduce our results, explore this area further, and expand our work. Our evaluations demonstrate up to a 14.66× speedup compared to a secure CPU configuration while maintaining data confidentiality and integrity when outsourcing linear and/or nonlinear computation.
 
 Note: This implementation is intended solely for performance experiments.
 
@@ -21,11 +26,13 @@ https://github.com/UBC-ECE-Sasha/PIM-Embedding-Lookup
 
 https://github.com/upmem/PIM-Embedding-Lookup/tree/multicol/upmem
 
-Logistic Regression and Linear Regression: 
+Logistic Regression and Linear Regression Training: 
 
-(Training:) https://github.com/CMU-SAFARI/pim-ml
+https://github.com/CMU-SAFARI/pim-ml
 
-(Linear Regression inference: ) https://github.com/CMU-SAFARI/prim-benchmarks
+Linear Regression inference:
+
+https://github.com/CMU-SAFARI/prim-benchmarks
 
 AES Implementation: 
 
@@ -49,6 +56,10 @@ The run.sh file builds the host and DPU-side code, links them, and finally runs 
 
 ## Setup
 For all applications, you need to install the UPMEM SDK: https://sdk.upmem.com/
+
 Note: The UPMEM SDK provides a simulator that you can use to run our code without requiring access to the real hardware. However, the simulator cannot be used to reproduce our performance results.
 
 For each application, please refer to the respective baseline repository for complete instructions on how to set up the environment.
+
+## Dataset
+Our scheme is evaluated using MLP inference, DLRM inference, logistic regression training, and linear regression training. To evaluate our implementation, we use randomly generated inputs.
