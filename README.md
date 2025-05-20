@@ -8,7 +8,7 @@ This is the open-source implementation for the paper:
 
 Please cite the following paper if you find this repository useful.
 
-Archive version:
+**Archive version:**
 
 Ghinani, Sahar Ghoflsaz, Jingyao Zhang, and Elaheh Sadredini. "Enabling Low-Cost Secure Computing on Untrusted In-Memory Architectures." arXiv preprint arXiv:2501.17292 (2025).
 
@@ -24,7 +24,7 @@ Ghinani, Sahar Ghoflsaz, Jingyao Zhang, and Elaheh Sadredini. "Enabling Low-Cost
 }
 ```
 
-USENIX Security 2025 version:
+**USENIX Security 2025 version:**
 
 Our work has been accepted to USENIX Security 2025. More materials related to this submission, such as the presentation and artifact description, can be found here: https://www.usenix.org/conference/usenixsecurity25/presentation/ghinani
 
