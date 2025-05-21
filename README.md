@@ -97,6 +97,8 @@ S. G. Ghinani, J. Zhang, and E. Sadredini, “Enabling low-cost secure computing
 
 Our work has been accepted to USENIX Security 2025. More materials related to this submission, such as the presentation and artifact description, can be found here: https://www.usenix.org/conference/usenixsecurity25/presentation/ghinani
 
+[![DOI](https://zenodo.org/badge/921982568.svg)](https://doi.org/10.5281/zenodo.14736863)
+
 ## Acknowledgements
 
 This work is funded, in part, by NSF Career Award #2339317,
