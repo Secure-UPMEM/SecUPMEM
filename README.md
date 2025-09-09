@@ -97,6 +97,25 @@ S. G. Ghinani, J. Zhang, and E. Sadredini, “Enabling low-cost secure computing
 
 Our work has been accepted to USENIX Security 2025. More materials related to this submission, such as the presentation and artifact description, can be found here: https://www.usenix.org/conference/usenixsecurity25/presentation/ghinani
 
+```
+@inproceedings{10.5555/3766078.3766169,
+author = {Ghinani, Sahar Ghoflsaz and Zhang, Jingyao and Sadredini, Elaheh},
+title = {Enabling low-cost secure computing on untrusted in-memory architectures},
+year = {2025},
+isbn = {978-1-939133-52-6},
+publisher = {USENIX Association},
+address = {USA},
+abstract = {Modern computing systems are limited in performance by the memory bandwidth available to processors, a problem known as the memory wall. Processing-in-Memory (PIM) promises to substantially improve this problem by moving processing closer to the data, improving effective data bandwidth, and leading to superior performance on memory-intensive workloads. However, integrating PIM modules within a secure computing system raises an interesting challenge: unencrypted data has to move off-chip to the PIM, exposing the data to attackers and breaking assumptions on Trusted Computing Bases (TCBs). To tackle this challenge, this paper leverages multi-party computation (MPC) techniques, specifically arithmetic secret sharing and Yao's garbled circuits, to outsource bandwidth-intensive computation securely to PIM. Additionally, we leverage precomputation optimization to prevent the CPU's portion of the MPC from becoming a bottleneck. We evaluate our approach using the UPMEM PIM system over various applications such as Deep Learning Recommendation Model inference and Logistic Regression. Our evaluations demonstrate up to a 14.66\texttimes{} speedup compared to a secure CPU configuration while maintaining data confidentiality and integrity when outsourcing linear and/or nonlinear computation.},
+booktitle = {Proceedings of the 34th USENIX Conference on Security Symposium},
+articleno = {91},
+numpages = {19},
+location = {Seattle, WA, USA},
+series = {SEC '25}
+}
+```
+
+**Zenodo:**
+
 [![DOI](https://zenodo.org/badge/921982568.svg)](https://doi.org/10.5281/zenodo.14736863)
 
 ## Acknowledgements
