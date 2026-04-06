@@ -77,21 +77,6 @@ Please refer to https://github.com/Secure-UPMEM/SecUPMEM/issues for a list of kn
 
 Please cite the following paper if you find this repository useful.
 
-**Archive version:**
-
-S. G. Ghinani, J. Zhang, and E. Sadredini, “Enabling low-cost secure computing on untrusted in-memory architectures,” arXiv preprint arXiv:2501.17292, 2025.
-
-```
-@misc{ghinani2025enablinglowcostsecurecomputing,
-      title={Enabling Low-Cost Secure Computing on Untrusted In-Memory Architectures}, 
-      author={Sahar Ghoflsaz Ghinani and Jingyao Zhang and Elaheh Sadredini},
-      year={2025},
-      eprint={2501.17292},
-      archivePrefix={arXiv},
-      primaryClass={cs.CR},
-      url={https://arxiv.org/abs/2501.17292}, 
-}
-```
 
 **USENIX Security 2025 version:**
 
@@ -113,6 +98,23 @@ location = {Seattle, WA, USA},
 series = {SEC '25}
 }
 ```
+
+**Archive version:**
+
+S. G. Ghinani, J. Zhang, and E. Sadredini, “Enabling low-cost secure computing on untrusted in-memory architectures,” arXiv preprint arXiv:2501.17292, 2025.
+
+```
+@misc{ghinani2025enablinglowcostsecurecomputing,
+      title={Enabling Low-Cost Secure Computing on Untrusted In-Memory Architectures}, 
+      author={Sahar Ghoflsaz Ghinani and Jingyao Zhang and Elaheh Sadredini},
+      year={2025},
+      eprint={2501.17292},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR},
+      url={https://arxiv.org/abs/2501.17292}, 
+}
+```
+
 
 **Zenodo:**
 
